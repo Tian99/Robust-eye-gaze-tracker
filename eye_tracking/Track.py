@@ -50,7 +50,7 @@ class fast_tracker:
 
 	#Here comes the hard one, how to find the exact coordinate of the pupil and the glint
 	def hough_transform(self, img):
-		#Right now it's just the very basic hough transform, improver later
+		#Right now it's just the very basic hough transform, improve later
 		#Keep an origional image to see what the result looks like
 		height = img.shape[0]
 		width = img.shape[1]
@@ -64,7 +64,7 @@ class fast_tracker:
 				#If an edge pixel is found
 				if img.item(y, x) >= 255:
 					for r in range(Rmin, Rmax, 2):
-						for t in range(0, 260, 2):
+						for t in range(0, 360, 2):
 							#Cast it to a new cooedinates
 							x0 = int(x-(r*math.cos(math.radians(t))))
 							y0 = int(y-(r*math.sin(math.radians(t))))
