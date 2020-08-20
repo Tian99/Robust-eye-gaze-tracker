@@ -1,17 +1,16 @@
 import cv2
 import os
+import sys
 import numpy as np
 from eye_tracking.Track import fast_tracker
-from PyQt5 import uic, QtCore, QtGui, QtWidgets
 
-class main(QtWidgets.QMainWindow):
+class main():
     def __init__(self, video = None, file = None):
         #Dictionary including index and picture for each
         self.pic_collection = {}
         self.video = video
         self.file = file
         self.wanted = None
-        uic.loadUi('interface/dum.ui')
 
     def generate(self):
         #Video for the patient
@@ -62,9 +61,7 @@ class main(QtWidgets.QMainWindow):
 
 if __name__ == '__main__':
     #Later put into the user interface
-    APP = QtWidgets.QApplication([])
     video = 'input/run1.avi'
     file = 'Something'
     Main = main(video, file)
     Main.generate()
-    sys.exit(APP.exec_())

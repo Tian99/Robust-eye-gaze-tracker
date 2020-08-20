@@ -10,7 +10,7 @@ import math
 #threshold: somewhat correct
 #raiuds: way smaller for the actual frame
 class fast_tracker:
-	def __init__(self, img, blur=(101,100), canny=(30, 40), threshold=(100, 250), radius=(200, 270)):
+	def __init__(self, img, blur=(120,120), canny=(30, 40), threshold=(120, 250), radius=(230, 300)):
 		#the frame is a bit different than the img it is testing here!
 		self.img = img
 		self.blur = blur
@@ -36,16 +36,19 @@ class fast_tracker:
 		#Convert the imported frame to grey image
 		gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		#Blurring Method
-		blurImg = cv2.blur(gray_image,(self.blur[0], self.blur[1]))  
+		blurImg = cv2.blur(gray_image,(self.blur[0], self.blur[1]))
+		cv2.imwrite('sample1.png', blurImg)  
 		return blurImg
 
 	#This method is crucial to get a better canny image
 	def threshold_img(self, img):
 	    _, proc = cv2.threshold(img, self.threshold[0], self.threshold[1], cv2.THRESH_BINARY) 
+	    cv2.imwrite('sample2.png', proc)
 	    return proc 
 
 	def canny_img(self, img):
 		edges = cv2.Canny(img, self.canny[0], self.canny[1])
+		cv2.imwrite('sample3.png', edges)
 		return edges
 
 	#Here comes the hard one, how to find the exact coordinate of the pupil and the glint
