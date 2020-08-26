@@ -4,12 +4,13 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtGui import QIcon, QPixmap
 
 class MyWidget(QtWidgets.QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, size_factor = (3,3)):
         super().__init__()
         self.setWindowTitle('User Input')
         self.setGeometry(30,30,600,400)
         self.label = QtWidgets.QLabel(self)
         self.pixmap = QPixmap('input/chosen_pic.png')
+
         self.setFixedSize(self.pixmap.width(), self.pixmap.height())
 
         self.begin = QtCore.QPoint()
@@ -27,8 +28,6 @@ class MyWidget(QtWidgets.QWidget):
         end_x = self.end.x()
         end_y = self.end.y()
 
-        radius = abs(math.sqrt((end_x - begin_x)**2 + (end_y - begin_y)**2))/2
-        print(radius)
 
     def mousePressEvent(self, event):
         self.begin = event.pos()
@@ -40,7 +39,7 @@ class MyWidget(QtWidgets.QWidget):
         self.update()
 
     def mouseReleaseEvent(self, event):
-        self.begin = event.pos()
+        # self.begin = event.pos()
         self.end = event.pos()
         # self.update()
 
