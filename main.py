@@ -1,6 +1,7 @@
-import cv2
 import os
 import sys
+import cv2
+import threading
 import numpy as np
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
@@ -16,6 +17,8 @@ class main(QtWidgets.QMainWindow):
         self.MyWidget = None
         self.width = 0
         self.height = 0
+        self.Video = None
+        self.File = None
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
@@ -25,9 +28,14 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.setEnabled(False)
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
+        self.Terminate.clicked.connect(self.terminate)
         self.show()
 
+    def terminate(self):
+        print('Implement later')
+
     def analyze(self):
+        self.Analyze.setEnabled(False)
         print(self.MyWidget.begin)
         print(self.MyWidget.end)
 
@@ -38,24 +46,29 @@ class main(QtWidgets.QMainWindow):
 
         print(self.cropping_factor)
 
-
-
+    #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
+        self.Analyze.setEnabled(True)
+        self.Generate.setEnabled(False)
         #Video for the patient
-        Video = 'input/run1.avi'#self.Video.text()
+        self.Video = 'input/run1.avi'#self.Video.text()
         #Data retrived by the machine
-        File = 'instruction.txt'#self.File.text()
+        self.File = 'instruction.txt'#self.File.text()
         #Check validity
-        if not os.path.exists(Video): #or not os.path.exists(File):
+        if not os.path.exists(self.Video): #or not os.path.exists(File):
             print('Video entered not exist')
             return
-        if not os.path.exists(File):
+        if not os.path.exists(self.File):
             print("File entered not exist")
             return
 
         print('Start writing images to the file')
 
-        self.wanted = self.to_frame(Video)
+        #Create a thread
+        t1 = threading.Thread(target = self.to_frame, args = (self.Video, None))
+        t1.start()
+
+        self.wanted = self.to_frame(self.Video)
         #Just to check for extreme cases, could be ignored for normal cases.
         if self.wanted != None:
             sample = self.pic_collection[self.wanted]
@@ -67,18 +80,16 @@ class main(QtWidgets.QMainWindow):
         self.MyWidget = MyWidget(self)
         self.LayVideo.addWidget(self.MyWidget)
 
-        self.Analyze.setEnabled(True)
-        self.Generate.setEnabled(False)
-
     #This function is only for choosing the best open-eye picture
     #Maybe its a bit redundant, try to fix later
-    def to_frame(self, video, i = 0):
+    def to_frame(self, video, limit = 500):
         maximum = 0
         wanted = 0
+        #i counts the image sequence generated from the video file
+        i = 0
         cap = cv2.VideoCapture(video)
         while(cap.isOpened()):
             ret, frame = cap.read()
-
             if ret == False:
                 break
             #Need to figure out a way to downscale the image to make it run faster
@@ -86,19 +97,24 @@ class main(QtWidgets.QMainWindow):
             self.width = frame.shape[1]
 
             # frame = cv2.resize(frame,(int(self.width/self.size_factor[0]), int(self.height/self.size_factor[1])))
+            if limit != None:
+                #Test for the non-blinking image(Find image with the larggest dark space)
+                if len(np.where(frame < 100)[0]) > maximum and i < limit:
+                    maximum = len(np.where(frame < 100)[0])
+                    wanted = i
+                #Add a limit to it so it could run faster when testing
+                #We need a perfect opened_eye to run machine learning program on to determine the parameters.
+                if i > limit:
+                    return wanted
 
-            #Test for the non-blinking image(Find image with the larggest dark space)
-            if len(np.where(frame < 100)[0]) > maximum and i < 1000:
-                maximum = len(np.where(frame < 100)[0])
-                wanted = i
-            #Add a limit to it so it could run faster when testing
-            #We need a perfect opened_eye to run machine learning program on to determine the parameters.
-            if i > 500:
-                return wanted
+                self.pic_collection[i] = frame
+                print("image scanned: ", i)
 
-            self.pic_collection[i] = frame
+            else: 
+                cv2.imwrite('output/%d.png'%i, frame)
+
             i+=1
-            print("image scanned: ", i)
+        print('Thread 2 finished')
         return wanted
 
 if __name__ == '__main__':

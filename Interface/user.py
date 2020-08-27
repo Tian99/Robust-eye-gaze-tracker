@@ -31,7 +31,6 @@ class MyWidget(QtWidgets.QWidget):
         end_x = self.end.x()
         end_y = self.end.y()
 
-
     def mousePressEvent(self, event):
         self.begin = event.pos()
         self.end = event.pos()
