@@ -2,8 +2,9 @@ import cv2
 import os
 import sys
 import numpy as np
-from eye_tracking.Track import fast_tracker
 from Interface.user import MyWidget
+from PyQt5.QtGui import QIcon, QPixmap
+from eye_tracking.Track import fast_tracker
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 
 class main(QtWidgets.QMainWindow):
@@ -37,7 +38,7 @@ class main(QtWidgets.QMainWindow):
 
         print(self.cropping_factor)
 
-        
+
 
     def generate(self):
         #Video for the patient
@@ -69,6 +70,8 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.setEnabled(True)
         self.Generate.setEnabled(False)
 
+    #This function is only for choosing the best open-eye picture
+    #Maybe its a bit redundant, try to fix later
     def to_frame(self, video, i = 0):
         maximum = 0
         wanted = 0

@@ -4,12 +4,15 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtGui import QIcon, QPixmap
 
 class MyWidget(QtWidgets.QWidget):
-    def __init__(self, parent, size_factor = (3,3)):
+    def __init__(self, parent, size_factor = (3,3), pixmap = None):
         super().__init__()
         self.setWindowTitle('User Input')
         self.setGeometry(30,30,600,400)
         self.label = QtWidgets.QLabel(self)
-        self.pixmap = QPixmap('input/chosen_pic.png')
+        if pixmap == None:
+            self.pixmap = QPixmap('input/chosen_pic.png')
+        else:
+            self.pixmap = pixmap
 
         self.setFixedSize(self.pixmap.width(), self.pixmap.height())
 
