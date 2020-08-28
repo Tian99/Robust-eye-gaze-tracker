@@ -23,7 +23,7 @@ class main(QtWidgets.QMainWindow):
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
 
-        uic.loadUi('interface/dum.ui', self)
+        uic.loadUi('Interface/dum.ui', self)
         self.setWindowTitle('Pupil Tracking')
         self.Analyze.setEnabled(False)
         self.Generate.clicked.connect(self.generate)
@@ -56,16 +56,16 @@ class main(QtWidgets.QMainWindow):
         self.File = 'instruction.txt'#self.File.text()
         #Check validity
         if not os.path.exists(self.Video): #or not os.path.exists(File):
-            print('Video entered not exist')
+            print(f"Video file '{self.Video}' does not exist")
             return
         if not os.path.exists(self.File):
-            print("File entered not exist")
+            print(f"Text file '{self.File}' does not exist")
             return
 
         print('Start writing images to the file')
 
         #Create a thread
-        t1 = threading.Thread(target = self.to_frame, args = (self.Video, None))
+        t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
         t1.start()
 
         self.wanted = self.to_frame(self.Video)
