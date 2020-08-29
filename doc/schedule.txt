@@ -1,0 +1,16 @@
+ 0 2020-08-21 * env setup
+ 1 2020-08-28 * init gui, threading
+ 2 2020-09-04 - read and contextualize
+ 3 2020-09-11 - 
+ 4 2020-09-18 - 
+ 5 2020-09-25 - 
+ 6 2020-10-02 - 
+ 7 2020-10-09 - 
+ 8 2020-10-16 - 
+ 9 2020-10-23 - 
+10 2020-10-30 - 
+11 2020-11-06 - 
+12 2020-11-13 - 
+13 2020-11-20 - 
+14 2020-11-27 - 
+15 2020-12-04 - model degree of visual angle, matched to external event timing, score behavior (eye position precision)
