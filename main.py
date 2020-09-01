@@ -5,6 +5,7 @@ import sys
 import cv2
 import threading
 import numpy as np
+from extraction import extraction
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from eye_tracking.Track import fast_tracker
@@ -21,6 +22,7 @@ class main(QtWidgets.QMainWindow):
         self.height = 0
         self.Video = None
         self.File = None
+        self.collection = {}
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
@@ -58,15 +60,20 @@ class main(QtWidgets.QMainWindow):
         self.File = 'instruction.txt'#self.File.text()
         #Check validity
         if not os.path.exists(self.Video): #or not os.path.exists(File):
-            print(f"Video file '{self.Video}' does not exist")
+            print("Video file '{self.Video}' does not exist")
             return
         if not os.path.exists(self.File):
-            print(f"Text file '{self.File}' does not exist")
+            print("Text file '{self.File}' does not exist")
             return
 
-        print('Start writing images to the file')
+        print('Start writing images to the file\n')
+        print('start reading in files')
 
-        #Create a thread
+        #self.collection = {cue, vgs, dly, mgs}
+        self.collection = extraction() #Latter put in file address
+        #Try get the video frame next time
+
+        #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
         t1.start()
 
