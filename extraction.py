@@ -19,7 +19,7 @@ def extraction(file = address):
 		collection[count] = [row['cue'], row['vgs'], row['dly'], row['mgs']]
 		count += 1
 
-	print(collection)
+	# print(collection)
 
 	return collection
 

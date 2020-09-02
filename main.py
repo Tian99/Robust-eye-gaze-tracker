@@ -16,13 +16,15 @@ class main(QtWidgets.QMainWindow):
         #Dictionary including index and picture for each
         super().__init__()
         self.pic_collection = {}
+        self.collection = {}
+        self.p_r_collection = {}
         self.wanted = None
         self.MyWidget = None
         self.width = 0
         self.height = 0
         self.Video = None
         self.File = None
-        self.collection = {}
+        self.f_rate = 60 #Should be presented in the file. Don't know if could be gotten using python
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
@@ -71,11 +73,19 @@ class main(QtWidgets.QMainWindow):
 
         #self.collection = {cue, vgs, dly, mgs}
         self.collection = extraction() #Latter put in file address
+        # print(self.collection)
         #Try get the video frame next time
+        for key, data in self.collection.items():
+            self.p_r_collection[key] = [element * self.f_rate for element in data]
+        print(self.p_r_collection)
 
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
-        t1.start()
+        #Only run the thread when the file is empty
+        dir = os.listdir('output')
+        if len(dir) == 0:
+            self.label_6.setText(str(int(self.label_6.text())+1))
+            t1.start()
 
         self.wanted = self.to_frame(self.Video)
         #Just to check for extreme cases, could be ignored for normal cases.
