@@ -1,10 +1,19 @@
 from imutils.video import VideoStream
 from imutils.video import FPS
+import matplotlib.pyplot as plt 
 import argparse
 import imutils
 import time
 import cv2
 
+#python3 object_tracker.py  --video output.mov --tracker kcf
+
+"""
+t : plot
+q : exit
+s : select
+k : is optional --> select a big square before selecting s to increse runtime
+"""
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", type=str,
@@ -12,7 +21,6 @@ ap.add_argument("-v", "--video", type=str,
 ap.add_argument("-t", "--tracker", type=str, default="kcf",
 	help="OpenCV object tracker type")
 args = vars(ap.parse_args())
-
 # extract the OpenCV version info
 (major, minor) = cv2.__version__.split(".")[:2]
 # if we are using OpenCV 3.2 OR BEFORE, we can use a special factory
@@ -50,16 +58,29 @@ else:
 	vs = cv2.VideoCapture(args['video'])
 
 fps = None
-
-
+#Cropping factor
+r = None
+#These two collect the pupil center
+pupil_x = []
+pupil_y = []
+pupil_count = []
+count = 0
 while True:
+	count += 1
+	# Blur the frame first would give us a better result
 	frame = vs.read()
 	frame = frame[1] if args.get('video', False) else Frame
 
 	if frame is None:
+		print('Ending of the analysis')
 		break
 
 	frame = imutils.resize(frame, width = 500)
+	# frame = blur(frame)
+	if r != None:
+		frame = frame[int(r[1]):int(r[1] + r[3]), int(r[0]):int(r[0]+r[2])]
+	#Crop the image
+	# frame = frame[50:5000, 70:300]
 	(H, W) = frame.shape[:2]
 		# check to see if we are currently tracking an object
 	if initBB is not None:
@@ -68,8 +89,20 @@ while True:
 		# check to see if the tracking was a success
 		if success:
 			(x, y, w, h) = [int(v) for v in box]
+			# print(x, y, w, h)
+			middle_x = x + w/2
+			middle_y = y + h/2
+
+			print(middle_x, middle_y)
+
+			pupil_x.append(middle_x)
+			pupil_y.append(middle_y)
+			pupil_count.append(count)
 			cv2.rectangle(frame, (x, y), (x + w, y + h),
 				(0, 255, 0), 2)
+			#The dot in the center that marks the center of the pupil
+			cv2.circle(frame, (int(middle_x), int(middle_y)),5,
+				(255, 0, 0), -1)
 		# update the FPS counter
 		fps.update()
 		fps.stop()
@@ -92,6 +125,10 @@ while True:
 	key = cv2.waitKey(1) & 0xFF
 	# if the 's' key is selected, we are going to "select" a bounding
 	# box to track
+	if key == ord("k"):
+		r = cv2.selectROI("Frame", frame, fromCenter=False, 
+			showCrosshair=True)
+
 	if key == ord("s"):
 		# select the bounding box of the object we want to track (make
 		# sure you press ENTER or SPACE after selecting the ROI)
@@ -100,4 +137,19 @@ while True:
 		# start OpenCV object tracker using the supplied bounding box
 		# coordinates, then start the FPS throughput estimator as well
 		tracker.init(frame, initBB)
-		fps = FPS().start() 
+		fps = FPS().start()
+
+	if key == ord("t"):
+		#Plot the data
+		plt.plot(pupil_count, pupil_x) 
+		# naming the x axis 
+		plt.xlabel('pupil count') 
+		# naming the y axis 
+		plt.ylabel('x-direction') 
+		# giving a title to my graph 
+		plt.title('machine learning working model') 
+		# function to show the plot 
+		plt.show() 
+
+	if key == ord("q"):
+		exit()
