@@ -22,8 +22,13 @@ class main(QtWidgets.QMainWindow):
         self.MyWidget = None
         self.width = 0
         self.height = 0
+
+        # Video for the patient
         self.Video = None
+        # Data retrived by the machine
         self.File = None
+
+
         self.f_rate = 60 #Should be presented in the file. Don't know if could be gotten using python
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
@@ -35,7 +40,11 @@ class main(QtWidgets.QMainWindow):
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
         self.Terminate.clicked.connect(self.terminate)
+
+        self.VideoText.setText('input/run1.mov')
+        self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.show()
+
 
     def terminate(self):
         print('Implement later')
@@ -56,23 +65,25 @@ class main(QtWidgets.QMainWindow):
     def generate(self):
         self.Analyze.setEnabled(True)
         self.Generate.setEnabled(False)
-        #Video for the patient
-        self.Video = 'input/run1.avi'#self.Video.text()
-        #Data retrived by the machine
-        self.File = 'instruction.txt'#self.File.text()
+        self.Video = self.VideoText.text()
+        self.File = self.FileText.text()
         #Check validity
         if not os.path.exists(self.Video): #or not os.path.exists(File):
-            print("Video file '{self.Video}' does not exist")
+            print(f"Video file '{self.Video}' does not exist")
             return
         if not os.path.exists(self.File):
-            print("Text file '{self.File}' does not exist")
+            print(f"Text file '{self.File}' does not exist")
             return
+
+        # disable line editing once we've picked our files to avoid confusion
+        self.VideoText.setEnabled(False)
+        self.FileText.setEnabled(False)
 
         print('Start writing images to the file\n')
         print('start reading in files')
 
         #self.collection = {cue, vgs, dly, mgs}
-        self.collection = extraction() #Latter put in file address
+        self.collection = extraction(self.File)
         # print(self.collection)
         #Try get the video frame next time
         for key, data in self.collection.items():
@@ -82,8 +93,10 @@ class main(QtWidgets.QMainWindow):
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
         #Only run the thread when the file is empty
-        dir = os.listdir('output')
-        if len(dir) == 0:
+        if not os.path.exists('output'):
+            os.makedirs('output')
+        dirls = os.listdir('output')
+        if len(dirls) == 0:
             self.label_6.setText(str(int(self.label_6.text())+1))
             t1.start()
 
