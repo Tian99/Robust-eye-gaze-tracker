@@ -25,6 +25,11 @@ class MyWidget(QtWidgets.QWidget):
         br = QtGui.QBrush(QtGui.QColor(100, 10, 10, 90))  
         qp.setBrush(br)   
         qp.drawRect(QtCore.QRect(self.begin, self.end))
+        qp.drawLine(self.begin, self.end)
+        qp.drawLine(self.end.x(),\
+                    self.begin.y(),\
+                    self.begin.x(),\
+                    self.end.y())
 
         begin_x = self.begin.x()
         begin_y = self.begin.y()

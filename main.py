@@ -42,6 +42,7 @@ class main(QtWidgets.QMainWindow):
 
     def analyze(self):
         self.Analyze.setEnabled(False)
+        # self.Generate.setEnabled(True)
         print(self.MyWidget.begin)
         print(self.MyWidget.end)
 
@@ -50,6 +51,21 @@ class main(QtWidgets.QMainWindow):
         self.cropping_factor[1][0] = self.MyWidget.begin.y()
         self.cropping_factor[1][1] = self.MyWidget.end.y()
 
+        #Trurns out the cropping of x and y is reversed!!!
+        new_dimension = cv2.imread('input/chosen_pic.png')\
+        [self.cropping_factor[1][0] : self.cropping_factor[1][1],\
+        self.cropping_factor[0][0] : self.cropping_factor[0][1]]
+
+        ROI = (self.cropping_factor[0][0],\
+               self.cropping_factor[1][0],\
+               self.cropping_factor[0][1] - self.cropping_factor[0][0],\
+               self.cropping_factor[1][1] - self.cropping_factor[1][0]) 
+
+        print(ROI)
+
+        #Save file for the input of machine learning class
+        cv2.imwrite('input/search_case.png', new_dimension)
+
         print(self.cropping_factor)
 
     #This function also calls another thread which saves all video generated images in the output file
@@ -57,15 +73,15 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.setEnabled(True)
         self.Generate.setEnabled(False)
         #Video for the patient
-        self.Video = 'input/run1.avi'#self.Video.text()
+        self.Video = 'input/run1.mov'#self.Video.text()
         #Data retrived by the machine
-        self.File = 'instruction.txt'#self.File.text()
+        self.File = 'extraction.py'#self.File.text()
         #Check validity
         if not os.path.exists(self.Video): #or not os.path.exists(File):
-            print("Video file '{self.Video}' does not exist")
+            print("Video file '{self.Video}' does not exist".format(self.Video))
             return
         if not os.path.exists(self.File):
-            print("Text file '{self.File}' does not exist")
+            print("Text file '{self.File}' does not exist".format(self.File))
             return
 
         print('Start writing images to the file\n')
