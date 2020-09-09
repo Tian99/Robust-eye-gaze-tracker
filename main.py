@@ -10,6 +10,7 @@ from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from eye_tracking.Track import fast_tracker
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
+from tracker import auto_tracker
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -40,6 +41,11 @@ class main(QtWidgets.QMainWindow):
     def terminate(self):
         print('Implement later')
 
+    #The whole purpose of this function is to use multi-threading
+    def tracking(self, ROI):
+        #Initialize the eye_tracker
+        auto_tracker(self.Video, ROI)
+
     def analyze(self):
         self.Analyze.setEnabled(False)
         # self.Generate.setEnabled(True)
@@ -61,12 +67,13 @@ class main(QtWidgets.QMainWindow):
                self.cropping_factor[0][1] - self.cropping_factor[0][0],\
                self.cropping_factor[1][1] - self.cropping_factor[1][0]) 
 
-        print(ROI)
-
         #Save file for the input of machine learning class
-        cv2.imwrite('input/search_case.png', new_dimension)
+        # cv2.imwrite('input/search_case.png', new_dimension)
 
-        print(self.cropping_factor)
+        print(ROI)
+        t2 = threading.Thread(target=self.tracking, args=(ROI,))
+        t2.start()
+        t2.join()
 
     #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
@@ -101,7 +108,7 @@ class main(QtWidgets.QMainWindow):
         dir = os.listdir('output')
         if len(dir) == 0:
             self.label_6.setText(str(int(self.label_6.text())+1))
-            t1.start()
+            # t1.start()
 
         self.wanted = self.to_frame(self.Video)
         #Just to check for extreme cases, could be ignored for normal cases.
