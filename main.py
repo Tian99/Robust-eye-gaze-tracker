@@ -73,7 +73,8 @@ class main(QtWidgets.QMainWindow):
         print(ROI)
         t2 = threading.Thread(target=self.tracking, args=(ROI,))
         t2.start()
-        t2.join()
+        self.label_6.setText(str(int(self.label_6.text())+1))
+        # t2.join()
 
     #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
