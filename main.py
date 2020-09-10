@@ -68,6 +68,12 @@ class main(QtWidgets.QMainWindow):
         self.player.show()
 
     def analyze(self):
+
+        # will fail if we forget to select a region.
+        if self.MyWidget.begin.x() == self.MyWidget.end.x():
+            print("You must select a region first!")
+            return
+
         self.Analyze.setEnabled(False)
         self.Demo.setEnabled(True)
         # self.Generate.setEnabled(True)
@@ -79,6 +85,7 @@ class main(QtWidgets.QMainWindow):
         self.cropping_factor[1][0] = self.MyWidget.begin.y()
         self.cropping_factor[1][1] = self.MyWidget.end.y()
 
+        # TODO: unused? remove
         #Trurns out the cropping of x and y is reversed!!!
         new_dimension = cv2.imread('input/chosen_pic.png')\
         [self.cropping_factor[1][0] : self.cropping_factor[1][1],\
@@ -177,7 +184,8 @@ class main(QtWidgets.QMainWindow):
                     return wanted
 
                 self.pic_collection[i] = frame
-                print("image scanned: ", i)
+                if i % 25 == 0:
+                    print("%d/%d(max) image scanned" % (i,limit))
 
             else: 
                 cv2.imwrite('output/%d.png'%i, frame)
