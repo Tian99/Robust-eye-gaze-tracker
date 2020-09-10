@@ -8,7 +8,7 @@ class video_construct:
         # Arguments
         dir_path = './output/'
         ext = 'png'
-        output = 'video.mp4'
+        output = 'input/video.mp4'
         #If count is not user-defined
         if count is None:
 	        path, dirs, files = next(os.walk(dir_path))

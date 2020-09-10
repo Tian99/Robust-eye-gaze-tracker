@@ -3,14 +3,17 @@
 import os
 import sys
 import cv2
+import pathlib
 import threading
 import numpy as np
+from tracker import auto_tracker
 from extraction import extraction
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from eye_tracking.Track import fast_tracker
+from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
-from tracker import auto_tracker
+from Interface.video_player import VideoPlayer
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -29,13 +32,16 @@ class main(QtWidgets.QMainWindow):
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
-
+        self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
         uic.loadUi('Interface/dum.ui', self)
         self.setWindowTitle('Pupil Tracking')
         self.Analyze.setEnabled(False)
+        self.Demo.setEnabled(False)
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
         self.Terminate.clicked.connect(self.terminate)
+        self.Demo.clicked.connect(self.video_call)
+        self.player = VideoPlayer(self, self.path)
         self.show()
 
     def terminate(self):
@@ -46,8 +52,16 @@ class main(QtWidgets.QMainWindow):
         #Initialize the eye_tracker
         auto_tracker(self.Video, ROI)
 
+    def video_call(self):
+        #Construct all thr available files to video to be displayed
+        video_construct()
+        self.player.setWindowTitle("Player")
+        self.player.resize(600, 400)
+        self.player.show()
+
     def analyze(self):
         self.Analyze.setEnabled(False)
+        self.Demo.setEnabled(True)
         # self.Generate.setEnabled(True)
         print(self.MyWidget.begin)
         print(self.MyWidget.end)
