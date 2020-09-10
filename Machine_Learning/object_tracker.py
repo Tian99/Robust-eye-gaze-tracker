@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 from imutils.video import VideoStream
 from imutils.video import FPS
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import argparse
 import imutils
 import time
@@ -48,14 +50,7 @@ else:
 # to track
 initBB = None
 
-#If the video path was not supplied, grab the reference o the web cam
-if not args.get('video', False):
-	vs = VideoStream(src = 0).start()
-	time.sleep(1.0)
-
-	#Otherwide, grab a reference to the video file
-else:
-	vs = cv2.VideoCapture(args['video'])
+vs = cv2.VideoCapture(args['video'])
 
 fps = None
 #Cropping factor
@@ -69,7 +64,7 @@ while True:
 	count += 1
 	# Blur the frame first would give us a better result
 	frame = vs.read()
-	frame = frame[1] if args.get('video', False) else Frame
+	frame = frame[1]
 
 	if frame is None:
 		print('Ending of the analysis')
