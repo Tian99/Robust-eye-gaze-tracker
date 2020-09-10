@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>896</width>
-    <height>496</height>
+    <height>573</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -66,7 +66,7 @@
       <x>270</x>
       <y>80</y>
       <width>114</width>
-      <height>32</height>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
@@ -76,10 +76,10 @@
    <widget class="QWidget" name="verticalLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>120</y>
-      <width>311</width>
-      <height>271</height>
+      <x>40</x>
+      <y>160</y>
+      <width>361</width>
+      <height>291</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="LayVideo">
@@ -92,9 +92,9 @@
     <property name="geometry">
      <rect>
       <x>270</x>
-      <y>400</y>
+      <y>460</y>
       <width>114</width>
-      <height>32</height>
+      <height>41</height>
      </rect>
     </property>
     <property name="text">
@@ -104,10 +104,10 @@
    <widget class="QWidget" name="verticalLayoutWidget_2">
     <property name="geometry">
      <rect>
-      <x>510</x>
-      <y>120</y>
-      <width>311</width>
-      <height>271</height>
+      <x>490</x>
+      <y>160</y>
+      <width>381</width>
+      <height>291</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="LayVideo_2">
@@ -119,8 +119,8 @@
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
-      <x>520</x>
-      <y>10</y>
+      <x>540</x>
+      <y>100</y>
       <width>59</width>
       <height>16</height>
      </rect>
@@ -132,8 +132,8 @@
    <widget class="QLabel" name="label_2">
     <property name="geometry">
      <rect>
-      <x>520</x>
-      <y>40</y>
+      <x>540</x>
+      <y>130</y>
       <width>59</width>
       <height>16</height>
      </rect>
@@ -145,8 +145,8 @@
    <widget class="QLabel" name="label_3">
     <property name="geometry">
      <rect>
-      <x>470</x>
-      <y>10</y>
+      <x>490</x>
+      <y>100</y>
       <width>59</width>
       <height>16</height>
      </rect>
@@ -158,8 +158,8 @@
    <widget class="QLabel" name="label_4">
     <property name="geometry">
      <rect>
-      <x>470</x>
-      <y>40</y>
+      <x>490</x>
+      <y>130</y>
       <width>59</width>
       <height>16</height>
      </rect>
@@ -174,7 +174,7 @@
       <x>430</x>
       <y>0</y>
       <width>41</width>
-      <height>451</height>
+      <height>521</height>
      </rect>
     </property>
     <property name="orientation">
@@ -184,10 +184,10 @@
    <widget class="QPushButton" name="Terminate">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>400</y>
-      <width>114</width>
-      <height>32</height>
+      <x>10</x>
+      <y>490</y>
+      <width>101</width>
+      <height>31</height>
      </rect>
     </property>
     <property name="text">
@@ -218,6 +218,58 @@
     </property>
     <property name="text">
      <string>0</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>120</y>
+      <width>59</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Tracker:</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_8">
+    <property name="geometry">
+     <rect>
+      <x>70</x>
+      <y>120</y>
+      <width>59</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>KCF</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Demo">
+    <property name="geometry">
+     <rect>
+      <x>480</x>
+      <y>10</y>
+      <width>114</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Demo</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_9">
+    <property name="geometry">
+     <rect>
+      <x>630</x>
+      <y>10</y>
+      <width>231</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>NaN</string>
     </property>
    </widget>
   </widget>

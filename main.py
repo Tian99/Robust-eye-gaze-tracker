@@ -3,13 +3,17 @@
 import os
 import sys
 import cv2
+import pathlib
 import threading
 import numpy as np
+from tracker import auto_tracker
 from extraction import extraction
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from eye_tracking.Track import fast_tracker
+from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
+from Interface.video_player import VideoPlayer
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -33,24 +37,40 @@ class main(QtWidgets.QMainWindow):
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
-
+        self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
         uic.loadUi('Interface/dum.ui', self)
         self.setWindowTitle('Pupil Tracking')
         self.Analyze.setEnabled(False)
+        self.Demo.setEnabled(False)
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
         self.Terminate.clicked.connect(self.terminate)
-
         self.VideoText.setText('input/run1.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
+        self.Demo.clicked.connect(self.video_call)
+        self.player = VideoPlayer(self, self.path)
         self.show()
 
 
     def terminate(self):
         print('Implement later')
 
+    #The whole purpose of this function is to use multi-threading
+    def tracking(self, ROI):
+        #Initialize the eye_tracker
+        auto_tracker(self.Video, ROI)
+
+    def video_call(self):
+        #Construct all thr available files to video to be displayed
+        video_construct()
+        self.player.setWindowTitle("Player")
+        self.player.resize(600, 400)
+        self.player.show()
+
     def analyze(self):
         self.Analyze.setEnabled(False)
+        self.Demo.setEnabled(True)
+        # self.Generate.setEnabled(True)
         print(self.MyWidget.begin)
         print(self.MyWidget.end)
 
@@ -59,7 +79,24 @@ class main(QtWidgets.QMainWindow):
         self.cropping_factor[1][0] = self.MyWidget.begin.y()
         self.cropping_factor[1][1] = self.MyWidget.end.y()
 
-        print(self.cropping_factor)
+        #Trurns out the cropping of x and y is reversed!!!
+        new_dimension = cv2.imread('input/chosen_pic.png')\
+        [self.cropping_factor[1][0] : self.cropping_factor[1][1],\
+        self.cropping_factor[0][0] : self.cropping_factor[0][1]]
+
+        ROI = (self.cropping_factor[0][0],\
+               self.cropping_factor[1][0],\
+               self.cropping_factor[0][1] - self.cropping_factor[0][0],\
+               self.cropping_factor[1][1] - self.cropping_factor[1][0]) 
+
+        #Save file for the input of machine learning class
+        # cv2.imwrite('input/search_case.png', new_dimension)
+
+        print(ROI)
+        t2 = threading.Thread(target=self.tracking, args=(ROI,))
+        t2.start()
+        self.label_6.setText(str(int(self.label_6.text())+1))
+        # t2.join()
 
     #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
@@ -98,7 +135,7 @@ class main(QtWidgets.QMainWindow):
         dirls = os.listdir('output')
         if len(dirls) == 0:
             self.label_6.setText(str(int(self.label_6.text())+1))
-            t1.start()
+            # t1.start()
 
         self.wanted = self.to_frame(self.Video)
         #Just to check for extreme cases, could be ignored for normal cases.

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from imutils.video import VideoStream
 from imutils.video import FPS
 import matplotlib.pyplot as plt
@@ -50,7 +49,14 @@ else:
 # to track
 initBB = None
 
-vs = cv2.VideoCapture(args['video'])
+#If the video path was not supplied, grab the reference o the web cam
+if not args.get('video', False):
+	vs = VideoStream(src = 0).start()
+	time.sleep(1.0)
+
+	#Otherwide, grab a reference to the video file
+else:
+	vs = cv2.VideoCapture(args['video'])
 
 fps = None
 #Cropping factor
@@ -62,16 +68,13 @@ pupil_count = []
 count = 0
 while True:
 	count += 1
-	# Blur the frame first would give us a better result
 	frame = vs.read()
-	frame = frame[1]
-
+	frame = frame[1] if args.get('video', False) else frame
 	if frame is None:
 		print('Ending of the analysis')
 		break
 
-	frame = imutils.resize(frame, width = 500)
-	# frame = blur(frame)
+	# frame = imutils.resize(frame, width = 500)
 	if r != None:
 		frame = frame[int(r[1]):int(r[1] + r[3]), int(r[0]):int(r[0]+r[2])]
 	#Crop the image
@@ -121,7 +124,7 @@ while True:
 	# if the 's' key is selected, we are going to "select" a bounding
 	# box to track
 	if key == ord("k"):
-		r = cv2.selectROI("Frame", frame, fromCenter=False, 
+		r = cv2.selectROI("Frame", frame, fromCenter=False,
 			showCrosshair=True)
 
 	if key == ord("s"):
@@ -131,20 +134,22 @@ while True:
 			showCrosshair=True)
 		# start OpenCV object tracker using the supplied bounding box
 		# coordinates, then start the FPS throughput estimator as well
+		print(type(initBB))
+		print(type(frame))
 		tracker.init(frame, initBB)
 		fps = FPS().start()
 
 	if key == ord("t"):
 		#Plot the data
-		plt.plot(pupil_count, pupil_x) 
-		# naming the x axis 
-		plt.xlabel('pupil count') 
-		# naming the y axis 
-		plt.ylabel('x-direction') 
-		# giving a title to my graph 
-		plt.title('machine learning working model') 
-		# function to show the plot 
-		plt.show() 
+		plt.plot(pupil_count, pupil_x)
+		# naming the x axis
+		plt.xlabel('pupil count')
+		# naming the y axis
+		plt.ylabel('x-direction')
+		# giving a title to my graph
+		plt.title('machine learning working model')
+		# function to show the plot
+		plt.show()
 
 	if key == ord("q"):
 		exit()
