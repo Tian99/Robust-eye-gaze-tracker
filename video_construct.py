@@ -9,6 +9,8 @@ class video_construct:
         dir_path = './output/'
         ext = 'png'
         output = 'input/video.mp4'
+        start = 0
+        frame = None
         #If count is not user-defined
         if count is None:
 	        path, dirs, files = next(os.walk(dir_path))
@@ -16,7 +18,9 @@ class video_construct:
         print(count)
         # Determine the width and height from the first image
         #Simply read the first image
-        frame = cv2.imread('output/1.png')
+        while frame is None:
+            start += 1
+            frame = cv2.imread('output/'+str(count)+".png")
         height, width, channels = frame.shape
 
         # Define the codec and create VideoWriter object

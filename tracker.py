@@ -86,7 +86,6 @@ class auto_tracker():
 				info = [
 						("Tracker", "KCF"),
 						("Success", "Yes" if success else "No"),
-						("FPS", "{:.2f}".format(fps.fps())),
 				]
 
 				#Loop over the info tuples and draw them on our frame
