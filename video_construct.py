@@ -20,7 +20,7 @@ class video_construct:
         #Simply read the first image
         while frame is None:
             start += 1
-            frame = cv2.imread('output/'+str(count)+".png")
+            frame = cv2.imread(os.path.join(dir_path,'%015d.png'%count))
         height, width, channels = frame.shape
 
         # Define the codec and create VideoWriter object
@@ -29,7 +29,7 @@ class video_construct:
         # images = images.sort(key = lambda var: )
 
         for image in range(1, count):
-            image_path = os.path.join(dir_path, str(image)+'.png')
+            image_path = os.path.join(dir_path, '%015.png'%image)
             frame = cv2.imread(image_path)
 
             out.write(frame) # Write out frame to video
