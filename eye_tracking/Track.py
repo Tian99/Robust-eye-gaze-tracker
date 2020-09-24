@@ -10,7 +10,7 @@ import math
 #threshold: somewhat correct
 #raiuds: way smaller for the actual frame
 class fast_tracker:
-	def __init__(self, img, blur=(120,120), canny=(30, 40), threshold=(120, 250), radius=(230, 300)):
+	def __init__(self, img, blur=(16,16), canny=(40, 50), threshold=(90, 120), radius=(230, 300)):
 		#the frame is a bit different than the img it is testing here!
 		self.img = img
 		self.blur = blur
@@ -103,7 +103,7 @@ class fast_tracker:
 			cv2.imwrite('test.png', circled_cases)
 
 if __name__ == '__main__':
-	img = cv2.imread('../input/Sample.png')
+	img = cv2.imread('../input/search_case.png')
 	APP = fast_tracker(img)
 	output = APP.prepossing()
 	APP.hough_transform(output)

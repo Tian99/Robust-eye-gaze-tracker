@@ -6,3 +6,7 @@ output/
 .ipynb_checkpoints
 .DS_Store
 *.mp4
+Machine_Learning/
+hed_model/
+holistically-nested-edge-detection/
+Images/

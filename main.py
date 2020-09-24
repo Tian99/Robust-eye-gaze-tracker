@@ -5,6 +5,7 @@ import sys
 import cv2
 import pathlib
 import threading
+import os, shutil
 import numpy as np
 from tracker import auto_tracker
 from extraction import extraction
@@ -49,6 +50,7 @@ class main(QtWidgets.QMainWindow):
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.Demo.clicked.connect(self.video_call)
         self.player = VideoPlayer(self, self.path)
+        #Clear the folder to eliminate overlapping
         self.show()
 
 
@@ -66,6 +68,19 @@ class main(QtWidgets.QMainWindow):
         self.player.setWindowTitle("Player")
         self.player.resize(600, 400)
         self.player.show()
+
+    #Clear everything in a folder
+    def clear_folder(self, path):
+        folder = path
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
 
     def analyze(self):
 
@@ -109,6 +124,7 @@ class main(QtWidgets.QMainWindow):
     def generate(self):
         self.Analyze.setEnabled(True)
         self.Generate.setEnabled(False)
+        self.clear_folder("./output")  # TODO: DANGEROUS. maybe gui button or checkbox?
         self.Video = self.VideoText.text()
         self.File = self.FileText.text()
         #Check validity
