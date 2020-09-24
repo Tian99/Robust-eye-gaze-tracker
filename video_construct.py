@@ -29,7 +29,7 @@ class video_construct:
         # images = images.sort(key = lambda var: )
 
         for image in range(1, count):
-            image_path = os.path.join(dir_path, '%015.png'%image)
+            image_path = os.path.join(dir_path, '%015d.png'%image)
             frame = cv2.imread(image_path)
 
             out.write(frame) # Write out frame to video
