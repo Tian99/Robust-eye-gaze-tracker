@@ -31,6 +31,7 @@ class MyWidget(QtWidgets.QWidget):
                     self.begin.x(),\
                     self.end.y())
 
+        # TODO: these are unused? remove
         begin_x = self.begin.x()
         begin_y = self.begin.y()
         end_x = self.end.x()

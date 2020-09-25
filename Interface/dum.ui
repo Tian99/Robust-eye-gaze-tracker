@@ -40,7 +40,7 @@
      <string>The file address:</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="Video">
+   <widget class="QLineEdit" name="VideoText">
     <property name="geometry">
      <rect>
       <x>130</x>
@@ -50,7 +50,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="File">
+   <widget class="QLineEdit" name="FileText">
     <property name="geometry">
      <rect>
       <x>130</x>

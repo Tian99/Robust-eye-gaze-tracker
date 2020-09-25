@@ -48,6 +48,8 @@ class auto_tracker():
 			print('Nah image')
 			exit()
 		#to initialize the tracker!!!
+
+		print("initializign tracking")
 		tracker.init(first, self.iniBB)
 		(success, box) = tracker.update(first)
 		while True:
@@ -63,42 +65,45 @@ class auto_tracker():
 			(success, box) = tracker.update(frame)
 			(H, W) = frame.shape[:2]
 			#check to see if the tracking was a success
-			print(success)
-			if success:
-				(x,y,w,h) = [int(v) for v in box]
-				# print(x,y,w,h)
-				middle_x = x + w/2
-				middle_y = y + h/2
+			if not success:
+				# print("# tracker update failed on %d" % count)
+				continue
+			(x,y,w,h) = [int(v) for v in box]
+			# print(x,y,w,h)
+			middle_x = x + w/2
+			middle_y = y + h/2
 
-				print(middle_x, middle_y)
+			# only print every 250 frames. printing is slow
+			if count % 250 == 0:
+				print("@ step %d, midde = (%.02f, %02f)" % (count, middle_x, middle_y))
 
-				self.pupil_x.append(middle_x)
-				self.pupil_y.append(middle_y)
-				self.pupil_count.append(count)
-				cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
-				#The dot in the center that marks the center of the pupil
-				cv2.circle(frame, (int(middle_x), int(middle_y)), 5, (255, 0, 0), -1)
+			self.pupil_x.append(middle_x)
+			self.pupil_y.append(middle_y)
+			self.pupil_count.append(count)
+			cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
+			#The dot in the center that marks the center of the pupil
+			cv2.circle(frame, (int(middle_x), int(middle_y)), 5, (255, 0, 0), -1)
 
-				#Update the fps counter
-				fps.update()
-				fps.stop()
-				#Information displying on the frame
-				info = [
-						("Tracker", "KCF"),
-						("Success", "Yes" if success else "No"),
-				]
+			#Update the fps counter
+			fps.update()
+			fps.stop()
+			#Information displying on the frame
+			info = [
+					("Tracker", "KCF"),
+					("Success", "Yes" if success else "No"),
+					("FPS", "{:.2f}".format(fps.fps())),
+			]
 
-				#Loop over the info tuples and draw them on our frame
-				for(i, (k, v)) in enumerate(info):
-					text = "{}: {}".format(k, v)
-					cv2.putText(frame, text, (10, H - ((i*20) + 20)), 
-							cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
-					#how the output frame
-				cv2.imwrite("output/%015d.png"%count, frame)
+			#Loop over the info tuples and draw them on our frame
+			for(i, (k, v)) in enumerate(info):
+				text = "{}: {}".format(k, v)
+				cv2.putText(frame, text, (10, H - ((i*20) + 20)), 
+						cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+				#how the output frame
+			cv2.imwrite("output/%015d.png"%count, frame)
+			key = cv2.waitKey(1) & 0xFF
 
-				key = cv2.waitKey(1) & 0xFF
-
-				if key == ord("q"):
-					exit()
+			if key == ord("q"):
+				exit()
 
 
