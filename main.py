@@ -60,7 +60,8 @@ class main(QtWidgets.QMainWindow):
     #The whole purpose of this function is to use multi-threading
     def tracking(self, ROI):
         #Initialize the eye_tracker
-        auto_tracker(self.Video, ROI)
+        track = auto_tracker(self.Video, ROI)
+        track.run_tracker()
 
     def video_call(self):
         #Construct all thr available files to video to be displayed

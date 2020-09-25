@@ -6,123 +6,191 @@ import imutils
 import time
 import cv2
 
+OPENCV_OBJECT_TRACKERS = {
+    "csrt": cv2.TrackerCSRT_create,
+    "kcf": cv2.TrackerKCF_create,
+    "boosting": cv2.TrackerBoosting_create,
+    "mil": cv2.TrackerMIL_create,
+    "tld": cv2.TrackerTLD_create,
+    "medianflow": cv2.TrackerMedianFlow_create,
+    "mosse": cv2.TrackerMOSSE_create,
+}
+
+
+def set_tracker(tracker_name):
+    """tracker definition depends on opencv version"""
+    # extract the OpenCV version info
+    (major, minor) = cv2.__version__.split(".")[:2]
+    # if we are using OpenCV 3.2 OR BEFORE, we can use a special factory
+    # function to create our object tracker
+    # Maybe read the video directly would be faster than reading from input file
+    if int(major) == 3 and int(minor) < 3:
+        return cv2.Tracker_create("kcf")
+
+    # otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
+    # approrpiate object tracker constructor:
+    # initialize a dictionary that maps strings to their corresponding
+    # OpenCV object tracker implementations
+    # grab the appropriate object tracker using our dictionary of
+    # OpenCV object tracker objects
+    return OPENCV_OBJECT_TRACKERS[tracker_name]()
+
+
+class Box:
+    """ wrapper for boxed pupil location from tracker"""
+
+    def __init__(self, boxcoords):
+        self.x, self.y, self.w, self.h = boxcoords
+
+    def mid_xy(self):
+        return (self.x + self.w / 2, self.y + self.h / 2)
+
+
+class TrackedFrame:
+    """a frame and it's tracking info"""
+
+    def __init__(self, frame, count):
+        self.frame = frame
+        self.count = count
+        self.box = None
+        self.success = False
+
+    def set_box(self, box):
+        self.box = box
+        self.success = self.box.w != 0
+
+    def draw_box(self):
+        """add bouding box and pupil center to image
+        text added by write image"""
+        box_color = (0, 255, 0)
+        center_color = (255, 0, 0)
+        mid_x, mid_y = self.box.mid_xy()
+        x, y, w, h = (self.box.x, self.box.y, self.box.w, self.box.h)
+        cv2.rectangle(self.frame, (x, y), (x + w, y + h), box_color, 2)
+        # The dot in the center that marks the center of the pupil
+        cv2.circle(self.frame, (int(mid_x), int(mid_y)), 5, center_color, -1)
+
 
 class auto_tracker:
-    def __init__(self, video, cropped, tracker_name="kcf"):
-        super().__init__()
+    """eye tracker"""
+
+    def __init__(
+        self, video_fname, bbox, tracker_name="kcf", write_img=True, max_frames=9e10
+    ):
+        # inputs
+        self.video_fname = video_fname
+        self.iniBB = bbox
+        self.tracker_name = tracker_name
+
+        # settings
+        self.settings = {"write_img": write_img, "max_frames": max_frames}
+
+        # accumulators
         self.pupil_x = []
         self.pupil_y = []
         self.pupil_count = []
-        self.count = 0
-        self.iniBB = cropped
+        # output
+        self.p_fh = None
+
+        self.tracker = set_tracker(tracker_name)
         # this image is used to construct the image tracker
         first = cv2.imread("input/chosen_pic.png")
-        count = 0
-        # extract the OpenCV version info
-        (major, minor) = cv2.__version__.split(".")[:2]
-        # if we are using OpenCV 3.2 OR BEFORE, we can use a special factory
-        # function to create our object tracker
-        # Maybe read the video directly would be faster than reading from input file
-        vs = cv2.VideoCapture(video)
-        if int(major) == 3 and int(minor) < 3:
-            tracker = cv2.Tracker_create("kcf")
-        # otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
-        # approrpiate object tracker constructor:
-        else:
-            # initialize a dictionary that maps strings to their corresponding
-            # OpenCV object tracker implementations
-            OPENCV_OBJECT_TRACKERS = {
-                "csrt": cv2.TrackerCSRT_create,
-                "kcf": cv2.TrackerKCF_create,
-                "boosting": cv2.TrackerBoosting_create,
-                "mil": cv2.TrackerMIL_create,
-                "tld": cv2.TrackerTLD_create,
-                "medianflow": cv2.TrackerMedianFlow_create,
-                "mosse": cv2.TrackerMOSSE_create,
-            }
-            # grab the appropriate object tracker using our dictionary of
-            # OpenCV object tracker objects
-            tracker = OPENCV_OBJECT_TRACKERS[tracker_name]()
-        # initialize the bounding box coordinates of the object we are going
-        # to track
-        if self.iniBB is None:
-            print("Nah image")
-            exit()
-        # to initialize the tracker!!!
-
+        (self.H, self.W) = first.shape[:2]
         print("initializign tracking")
-        tracker.init(first, self.iniBB)
-        (success, box) = tracker.update(first)
-        # file to save pupil location
-        p_fh = open("output/points.csv", "w")
-        p_fh.write("sample,x,y,r\n")
+        self.tracker.init(first, self.iniBB)
+        (success, box) = self.tracker.update(first)
 
-        while True:
-            # The image passed in is one that's already cropped
+        # file to save pupil location
+        self.p_fh = open("output/points.csv", "w")
+        self.p_fh.write("sample,x,y,r\n")
+
+    def find_box(self, frame):
+        self.tracker.init(frame, self.iniBB)
+        (success, box) = self.tracker.update(frame)
+
+        if success:
+            return Box([int(v) for v in box])
+        else:
+            return Box([0, 0, 0, 0])
+
+    def write_image(self, tframe, fps_measure):
+        tframe.draw_box()
+
+        # Information displying on the frame
+        info = [
+            ("Tracker", self.tracker_name),
+            ("Success", "Yes" if tframe.success else "No"),
+            ("FPS", "{:.2f}".format(fps_measure)),
+        ]
+
+        # Loop over the info tuples and draw them on our frame
+        for (i, (k, v)) in enumerate(info):
+            text = "{}: {}".format(k, v)
+            cv2.putText(
+                tframe.frame,
+                text,
+                (10, self.H - ((i * 20) + 20)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 0, 255),
+                2,
+            )
+            # how the output frame
+        cv2.imwrite("output/%015d.png" % tframe.count, tframe.frame)
+
+    def update_position(self, tframe):
+        middle_x, middle_y = tframe.box.mid_xy()
+
+        # print(x,y,w,h)
+        # TODO: get pupil radius.
+        # TODO: if not success is count off? need count for timing
+        self.p_fh.write("%d,%d,%d,NA\n" % (tframe.count, middle_x, middle_y))
+
+        self.pupil_x.append(middle_x)
+        self.pupil_y.append(middle_y)
+        self.pupil_count.append(tframe.count)
+
+    def run_tracker(self):
+        count = 0
+        vs = cv2.VideoCapture(self.video_fname)
+        while True and count < self.settings["max_frames"]:
             count += 1
-            frame = vs.read()
-            frame = frame[1]
-            if frame is None:
+            fps = FPS().start()
+
+            tframe = TrackedFrame(vs.read()[1], count)
+            if tframe.frame is None:
                 print("Ending of the analysis")
                 break
-            fps = FPS().start()
-            tracker.init(frame, self.iniBB)
-            (success, box) = tracker.update(frame)
-            (H, W) = frame.shape[:2]
-            # check to see if the tracking was a success
+            box = self.find_box(tframe.frame)
+            tframe.set_box(box)
 
-            if not success:
-                continue
-
-            (x, y, w, h) = [int(v) for v in box]
-            # print(x,y,w,h)
-            middle_x = x + w / 2
-            middle_y = y + h / 2
-            # TODO: get pupil radius.
-            # TODO: if not success is count off? need count for timing
-            p_fh.write("%d,%d,%d,NA\n" % (count, middle_x, middle_y))
-
-            # only print every 250 frames. printing is slow
-            if count % 250 == 0:
-                print("@ step %d, midde = (%.02f, %02f)" % (count, middle_x, middle_y))
-
-            self.pupil_x.append(middle_x)
-            self.pupil_y.append(middle_y)
-            self.pupil_count.append(count)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            # The dot in the center that marks the center of the pupil
-            cv2.circle(frame, (int(middle_x), int(middle_y)), 5, (255, 0, 0), -1)
+            # save positions to textfile and in this object
+            self.update_position(tframe)
 
             # Update the fps counter
             fps.update()
             fps.stop()
-            # Information displying on the frame
-            info = [
-                ("Tracker", "KCF"),
-                ("Success", "Yes" if success else "No"),
-                ("FPS", "{:.2f}".format(fps.fps())),
-            ]
+            fps_measure = fps.fps()
 
-            # Loop over the info tuples and draw them on our frame
-            for (i, (k, v)) in enumerate(info):
-                text = "{}: {}".format(k, v)
-                cv2.putText(
-                    frame,
-                    text,
-                    (10, H - ((i * 20) + 20)),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (0, 0, 255),
-                    2,
+            # only print every 250 frames. printing is slow
+            if count % 250 == 0:
+                print(
+                    "@ step %d, midde = (%.02f, %02f); %.02f fps"
+                    % (count, *tframe.box.mid_xy(), fps_measure)
                 )
-                # how the output frame
-            cv2.imwrite("output/%015d.png" % count, frame)
-            key = cv2.waitKey(1) & 0xFF
 
+            if self.settings.get("write_img", True):
+                self.write_image(tframe, fps_measure)
+
+            # option to quit with keyboard q
+            key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
                 exit()
-        p_fh.close()
+
+        self.p_fh.close()
 
 
 if __name__ == "__main__":
-    auto_tracker("input/run1.mov", (53, 36, 113, 94))
+    bbox = (48, 34, 162, 118)
+    track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
+    track.run_tracker()
