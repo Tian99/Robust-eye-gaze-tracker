@@ -160,7 +160,6 @@ class auto_tracker:
 
             tframe = TrackedFrame(vs.read()[1], count)
             if tframe.frame is None:
-                print("Ending of the analysis")
                 break
             box = self.find_box(tframe.frame)
             tframe.set_box(box)
@@ -188,6 +187,7 @@ class auto_tracker:
             if key == ord("q"):
                 exit()
 
+        print("Ending of the analysis")
         if self.p_fh:
             self.p_fh.close()
 
