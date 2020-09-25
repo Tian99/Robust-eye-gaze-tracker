@@ -204,7 +204,7 @@ class main(QtWidgets.QMainWindow):
                     print("%d/%d(max) image scanned" % (i,limit))
 
             else: 
-                cv2.imwrite('output/%d.png'%i, frame)
+                cv2.imwrite('output/%015d.png'%i, frame)
 
             i+=1
         print('Thread 2 finished')
