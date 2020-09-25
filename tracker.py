@@ -71,17 +71,17 @@ class auto_tracker():
 			(H, W) = frame.shape[:2]
 			#check to see if the tracking was a success
 
-			print(success)
-			if success:
-				(x,y,w,h) = [int(v) for v in box]
-				# print(x,y,w,h)
-				middle_x = x + w/2
-				middle_y = y + h/2
-                                # TODO: get pupil radius.
-                                # TODO: if not success is count off? need count for timing
-				p_fh.write("%d,%d,%d,NA\n" % (count, middle_x, middle_y))
+			if not success:
+                            continue
 
-				print(middle_x, middle_y)
+			(x,y,w,h) = [int(v) for v in box]
+			# print(x,y,w,h)
+			middle_x = x + w/2
+			middle_y = y + h/2
+                        # TODO: get pupil radius.
+                        # TODO: if not success is count off? need count for timing
+			p_fh.write("%d,%d,%d,NA\n" % (count, middle_x, middle_y))
+
         
 			# only print every 250 frames. printing is slow
 			if count % 250 == 0:
@@ -113,9 +113,10 @@ class auto_tracker():
 				cv2.imwrite("output/%015d.png"%count, frame)
 				key = cv2.waitKey(1) & 0xFF
 
-				if key == ord("q"):
-					exit()
-					p_fh.close()
+			if key == ord("q"):
+				exit()
+		p_fh.close()
+>>>>>>> 5a30686c3adc64c6c8ce5302a4f48eb36bdc94a9
 
 
 if __name__ == "__main__":
