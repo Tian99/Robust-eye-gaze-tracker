@@ -39,3 +39,7 @@ class video_construct:
         cv2.destroyAllWindows()
 
         print("The output video is {}".format(output))
+
+
+if __name__ == "__main__":
+    video_construct()
