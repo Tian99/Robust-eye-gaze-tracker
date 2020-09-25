@@ -7,7 +7,7 @@ import time
 import cv2
 
 class auto_tracker():
-	def __init__(self, video, cropped, tracker = "kcf"):
+	def __init__(self, video, cropped, tracker_name="kcf"):
 		super().__init__()
 		self.pupil_x = []
 		self.pupil_y = []
@@ -41,7 +41,7 @@ class auto_tracker():
 			}
 			# grab the appropriate object tracker using our dictionary of
 			# OpenCV object tracker objects
-			tracker = OPENCV_OBJECT_TRACKERS["kcf"]()
+			tracker = OPENCV_OBJECT_TRACKERS[tracker_name]()
 		# initialize the bounding box coordinates of the object we are going
 		# to track
 		if self.iniBB is None:
@@ -50,6 +50,10 @@ class auto_tracker():
 		#to initialize the tracker!!!
 		tracker.init(first, self.iniBB)
 		(success, box) = tracker.update(first)
+		# file to save pupil location
+		p_fh = open('output/points.csv', 'w')
+		p_fh.write("sample,x,y,r\n")
+
 		while True:
 			#The image passed in is one that's already cropped
 			count += 1
@@ -69,6 +73,9 @@ class auto_tracker():
 				# print(x,y,w,h)
 				middle_x = x + w/2
 				middle_y = y + h/2
+                                # TODO: get pupil radius.
+                                # TODO: if not success is count off? need count for timing
+				p_fh.write("%d,%d,%d,NA\n" % (count, middle_x, middle_y))
 
 				print(middle_x, middle_y)
 
@@ -100,5 +107,8 @@ class auto_tracker():
 
 				if key == ord("q"):
 					exit()
+		p_fh.close()
 
 
+if __name__ == "__main__":
+	auto_tracker('input/run1.mov', (53, 36, 113, 94))
