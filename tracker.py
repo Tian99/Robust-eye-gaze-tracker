@@ -14,6 +14,7 @@ class auto_tracker():
 		self.pupil_count = []
 		self.count = 0
 		self.iniBB = cropped
+
 		#this image is used to construct the image tracker
 		first = cv2.imread('input/chosen_pic.png')
 		count = 0
@@ -86,35 +87,35 @@ class auto_tracker():
 			if count % 250 == 0:
 				print("@ step %d, midde = (%.02f, %02f)" % (count, middle_x, middle_y))
 
-			self.pupil_x.append(middle_x)
-			self.pupil_y.append(middle_y)
-			self.pupil_count.append(count)
-			cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
-			#The dot in the center that marks the center of the pupil
-			cv2.circle(frame, (int(middle_x), int(middle_y)), 5, (255, 0, 0), -1)
+				self.pupil_x.append(middle_x)
+				self.pupil_y.append(middle_y)
+				self.pupil_count.append(count)
+				cv2.rectangle(frame, (x,y), (x+w, y+h), (0,255,0), 2)
+				#The dot in the center that marks the center of the pupil
+				cv2.circle(frame, (int(middle_x), int(middle_y)), 5, (255, 0, 0), -1)
 
-			#Update the fps counter
-			fps.update()
-			fps.stop()
-			#Information displying on the frame
-			info = [
-					("Tracker", "KCF"),
-					("Success", "Yes" if success else "No"),
-					("FPS", "{:.2f}".format(fps.fps())),
-			]
+				#Update the fps counter
+				fps.update()
+				fps.stop()
+				#Information displying on the frame
+				info = [
+						("Tracker", "KCF"),
+						("Success", "Yes" if success else "No"),
+						("FPS", "{:.2f}".format(fps.fps())),
+				]
 
-			#Loop over the info tuples and draw them on our frame
-			for(i, (k, v)) in enumerate(info):
-				text = "{}: {}".format(k, v)
-				cv2.putText(frame, text, (10, H - ((i*20) + 20)), 
-						cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
-				#how the output frame
-			cv2.imwrite("output/%015d.png"%count, frame)
-			key = cv2.waitKey(1) & 0xFF
+				#Loop over the info tuples and draw them on our frame
+				for(i, (k, v)) in enumerate(info):
+					text = "{}: {}".format(k, v)
+					cv2.putText(frame, text, (10, H - ((i*20) + 20)), 
+							cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+					#how the output frame
+				cv2.imwrite("output/%015d.png"%count, frame)
+				key = cv2.waitKey(1) & 0xFF
 
 				if key == ord("q"):
 					exit()
-		p_fh.close()
+					p_fh.close()
 
 
 if __name__ == "__main__":

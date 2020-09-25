@@ -20,32 +20,29 @@ class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
         #Dictionary including index and picture for each
         super().__init__()
-        self.pic_collection = {}
-        self.collection = {}
-        self.p_r_collection = {}
-        self.wanted = None
-        self.MyWidget = None
         self.width = 0
         self.height = 0
-
-        # Video for the patient
-        self.Video = None
-        # Data retrived by the machine
-        self.File = None
-
-
+        self.wanted = None
+        self.MyWidget = None
+        self.collection = {}
+        self.pic_collection = {}
+        self.p_r_collection = {}
+        self.Video = None   # Video for the patient
+        self.File = None  # Data retrived by the machine
         self.f_rate = 60 #Should be presented in the file. Don't know if could be gotten using python
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
-        self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
+
         uic.loadUi('Interface/dum.ui', self)
+        self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
         self.setWindowTitle('Pupil Tracking')
         self.Analyze.setEnabled(False)
         self.Demo.setEnabled(False)
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
         self.Terminate.clicked.connect(self.terminate)
+        #Only for the initial run
         self.VideoText.setText('input/run1.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.Demo.clicked.connect(self.video_call)
