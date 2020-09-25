@@ -115,6 +115,7 @@ class auto_tracker:
 
     def write_image(self, tframe, fps_measure):
         tframe.draw_box()
+        text_color = (0, 0, 255)
 
         # Information displying on the frame
         info = [
@@ -132,7 +133,7 @@ class auto_tracker:
                 (10, self.H - ((i * 20) + 20)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.6,
-                (0, 0, 255),
+                text_color,
                 2,
             )
             # how the output frame
@@ -187,7 +188,8 @@ class auto_tracker:
             if key == ord("q"):
                 exit()
 
-        self.p_fh.close()
+        if self.p_fh:
+            self.p_fh.close()
 
 
 if __name__ == "__main__":
