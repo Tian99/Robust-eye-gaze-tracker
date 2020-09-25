@@ -1,6 +1,7 @@
+#!/usr/bin/env python3
 from imutils.video import VideoStream
 from imutils.video import FPS
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 import argparse
 import imutils
 import time
@@ -123,7 +124,7 @@ while True:
 	# if the 's' key is selected, we are going to "select" a bounding
 	# box to track
 	if key == ord("k"):
-		r = cv2.selectROI("Frame", frame, fromCenter=False, 
+		r = cv2.selectROI("Frame", frame, fromCenter=False,
 			showCrosshair=True)
 
 	if key == ord("s"):
@@ -140,15 +141,15 @@ while True:
 
 	if key == ord("t"):
 		#Plot the data
-		plt.plot(pupil_count, pupil_x) 
-		# naming the x axis 
-		plt.xlabel('pupil count') 
-		# naming the y axis 
-		plt.ylabel('x-direction') 
-		# giving a title to my graph 
-		plt.title('machine learning working model') 
-		# function to show the plot 
-		plt.show() 
+		plt.plot(pupil_count, pupil_x)
+		# naming the x axis
+		plt.xlabel('pupil count')
+		# naming the y axis
+		plt.ylabel('x-direction')
+		# giving a title to my graph
+		plt.title('machine learning working model')
+		# function to show the plot
+		plt.show()
 
 	if key == ord("q"):
 		exit()

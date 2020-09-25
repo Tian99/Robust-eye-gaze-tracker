@@ -27,8 +27,13 @@ class main(QtWidgets.QMainWindow):
         self.MyWidget = None
         self.width = 0
         self.height = 0
+
+        # Video for the patient
         self.Video = None
+        # Data retrived by the machine
         self.File = None
+
+
         self.f_rate = 60 #Should be presented in the file. Don't know if could be gotten using python
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
@@ -41,10 +46,13 @@ class main(QtWidgets.QMainWindow):
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
         self.Terminate.clicked.connect(self.terminate)
+        self.VideoText.setText('input/run1.mov')
+        self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.Demo.clicked.connect(self.video_call)
         self.player = VideoPlayer(self, self.path)
         #Clear the folder to eliminate overlapping
         self.show()
+
 
     def terminate(self):
         print('Implement later')
@@ -75,6 +83,12 @@ class main(QtWidgets.QMainWindow):
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
     def analyze(self):
+
+        # will fail if we forget to select a region.
+        if self.MyWidget.begin.x() == self.MyWidget.end.x():
+            print("You must select a region first!")
+            return
+
         self.Analyze.setEnabled(False)
         self.Demo.setEnabled(True)
         # self.Generate.setEnabled(True)
@@ -86,6 +100,7 @@ class main(QtWidgets.QMainWindow):
         self.cropping_factor[1][0] = self.MyWidget.begin.y()
         self.cropping_factor[1][1] = self.MyWidget.end.y()
 
+        # TODO: unused? remove
         #Trurns out the cropping of x and y is reversed!!!
         new_dimension = cv2.imread('input/chosen_pic.png')\
         [self.cropping_factor[1][0] : self.cropping_factor[1][1],\
@@ -109,24 +124,26 @@ class main(QtWidgets.QMainWindow):
     def generate(self):
         self.Analyze.setEnabled(True)
         self.Generate.setEnabled(False)
-        self.clear_folder("./output")  
-        #Video for the patient
-        self.Video = 'input/run1.mov'#self.Video.text()
-        #Data retrived by the machine
-        self.File = 'extraction.py'#self.File.text()
+        self.clear_folder("./output")  # TODO: DANGEROUS. maybe gui button or checkbox?
+        self.Video = self.VideoText.text()
+        self.File = self.FileText.text()
         #Check validity
         if not os.path.exists(self.Video): #or not os.path.exists(File):
-            print("Video file '{self.Video}' does not exist".format(self.Video))
+            print(f"Video file '{self.Video}' does not exist")
             return
         if not os.path.exists(self.File):
-            print("Text file '{self.File}' does not exist".format(self.File))
+            print(f"Text file '{self.File}' does not exist")
             return
+
+        # disable line editing once we've picked our files to avoid confusion
+        self.VideoText.setEnabled(False)
+        self.FileText.setEnabled(False)
 
         print('Start writing images to the file\n')
         print('start reading in files')
 
         #self.collection = {cue, vgs, dly, mgs}
-        self.collection = extraction() #Latter put in file address
+        self.collection = extraction(self.File)
         # print(self.collection)
         #Try get the video frame next time
         for key, data in self.collection.items():
@@ -136,8 +153,10 @@ class main(QtWidgets.QMainWindow):
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
         #Only run the thread when the file is empty
-        dir = os.listdir('output')
-        if len(dir) == 0:
+        if not os.path.exists('output'):
+            os.makedirs('output')
+        dirls = os.listdir('output')
+        if len(dirls) == 0:
             self.label_6.setText(str(int(self.label_6.text())+1))
             # t1.start()
 
@@ -181,10 +200,11 @@ class main(QtWidgets.QMainWindow):
                     return wanted
 
                 self.pic_collection[i] = frame
-                print("image scanned: ", i)
+                if i % 25 == 0:
+                    print("%d/%d(max) image scanned" % (i,limit))
 
             else: 
-                cv2.imwrite('output/%d.png'%i, frame)
+                cv2.imwrite('output/%015d.png'%i, frame)
 
             i+=1
         print('Thread 2 finished')
