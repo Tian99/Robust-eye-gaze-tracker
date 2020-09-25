@@ -94,7 +94,7 @@ class auto_tracker():
 					cv2.putText(frame, text, (10, H - ((i*20) + 20)), 
 							cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
 					#how the output frame
-				cv2.imwrite("output/%d.png"%count, frame)
+				cv2.imwrite("output/%015d.png"%count, frame)
 
 				key = cv2.waitKey(1) & 0xFF
 
