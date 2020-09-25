@@ -59,16 +59,32 @@ class TrackedFrame:
         self.box = box
         self.success = self.box.w != 0
 
-    def draw_box(self):
+    def write_tracked_image(self, text_info):
         """add bouding box and pupil center to image
-        text added by write image"""
+        add text from text_info dict
+        @param text_info dict of information to put on image
+        @side-effect. cv2 modifies frame as it draws"""
         box_color = (0, 255, 0)
         center_color = (255, 0, 0)
+        text_color = (0, 0, 255)
+
         mid_x, mid_y = self.box.mid_xy()
         x, y, w, h = (self.box.x, self.box.y, self.box.w, self.box.h)
         cv2.rectangle(self.frame, (x, y), (x + w, y + h), box_color, 2)
         # The dot in the center that marks the center of the pupil
         cv2.circle(self.frame, (int(mid_x), int(mid_y)), 5, center_color, -1)
+        # Loop over the info tuples and draw them on our frame
+        h = self.frame.shape[0]
+        i = 0
+        for (k, v) in enumerate(text_info):
+            text = "{}: {}".format(k, v)
+            pos = (10, h - ((i * 20) + 20))
+            cv2.putText(
+                self.frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2
+            )
+            i = i + 1
+            # how the output frame
+        cv2.imwrite("output/%015d.png" % self.count, self.frame)
 
 
 class auto_tracker:
@@ -95,7 +111,6 @@ class auto_tracker:
         self.tracker = set_tracker(tracker_name)
         # this image is used to construct the image tracker
         first = cv2.imread("input/chosen_pic.png")
-        (self.H, self.W) = first.shape[:2]
         print("initializign tracking")
         self.tracker.init(first, self.iniBB)
         (success, box) = self.tracker.update(first)
@@ -112,32 +127,6 @@ class auto_tracker:
             return Box([int(v) for v in box])
         else:
             return Box([0, 0, 0, 0])
-
-    def write_image(self, tframe, fps_measure):
-        tframe.draw_box()
-        text_color = (0, 0, 255)
-
-        # Information displying on the frame
-        info = [
-            ("Tracker", self.tracker_name),
-            ("Success", "Yes" if tframe.success else "No"),
-            ("FPS", "{:.2f}".format(fps_measure)),
-        ]
-
-        # Loop over the info tuples and draw them on our frame
-        for (i, (k, v)) in enumerate(info):
-            text = "{}: {}".format(k, v)
-            cv2.putText(
-                tframe.frame,
-                text,
-                (10, self.H - ((i * 20) + 20)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                text_color,
-                2,
-            )
-            # how the output frame
-        cv2.imwrite("output/%015d.png" % tframe.count, tframe.frame)
 
     def update_position(self, tframe):
         middle_x, middle_y = tframe.box.mid_xy()
@@ -180,7 +169,12 @@ class auto_tracker:
                 )
 
             if self.settings.get("write_img", True):
-                self.write_image(tframe, fps_measure)
+                info = {
+                    "Tracker": self.tracker_name,
+                    "Success": "Yes" if tframe.success else "No",
+                    "FPS": "{:.2f}".format(fps_measure),
+                }
+                tframe.write_tracked_image(info)
 
             # option to quit with keyboard q
             key = cv2.waitKey(1) & 0xFF
