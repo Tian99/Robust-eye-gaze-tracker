@@ -40,39 +40,51 @@ class Box:
     """ wrapper for boxed pupil location from tracker"""
 
     def __init__(self, boxcoords):
+        boxcoords = (int(x) for x in boxcoords)
         self.x, self.y, self.w, self.h = boxcoords
 
+        # center
+        self.mid_x = self.x + self.w / 2
+        self.mid_y = self.y + self.h / 2
+
     def mid_xy(self):
-        return (self.x + self.w / 2, self.y + self.h / 2)
+        return (self.mid_x, self.mid_y)
+
+    def draw_box(self, frame):
+        """draw box onto a frame"""
+        box_color = (0, 255, 0)
+        center_color = (255, 0, 0)
+        x, y, w, h = (self.x, self.y, self.w, self.h)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
+        # The dot in the center that marks the center of the pupil
+        cv2.circle(frame, (int(self.mid_x), int(self.mid_y)), 5, center_color, -1)
+
+    def __repr__(self):
+        return f'({self.x},{self.y}) {self.w}x{self.h}' 
+
 
 
 class TrackedFrame:
     """a frame and it's tracking info"""
 
     def __init__(self, frame, count):
-        self.frame = frame
-        self.count = count
-        self.box = None
-        self.success = False
+        self.frame = frame    # for saving image
+        self.count = count    # image filename
+        self.box = None       # save image overlay: box
+        self.success = False  # save image overlay: text
 
     def set_box(self, box):
         self.box = box
         self.success = self.box.w != 0
 
-    def write_tracked_image(self, text_info):
+    def draw_tracking(self, text_info):
         """add bouding box and pupil center to image
         add text from text_info dict
         @param text_info dict of information to put on image
         @side-effect. cv2 modifies frame as it draws"""
-        box_color = (0, 255, 0)
-        center_color = (255, 0, 0)
         text_color = (0, 0, 255)
 
-        mid_x, mid_y = self.box.mid_xy()
-        x, y, w, h = (self.box.x, self.box.y, self.box.w, self.box.h)
-        cv2.rectangle(self.frame, (x, y), (x + w, y + h), box_color, 2)
-        # The dot in the center that marks the center of the pupil
-        cv2.circle(self.frame, (int(mid_x), int(mid_y)), 5, center_color, -1)
+        self.box.draw_box(self.frame)
         # Loop over the info tuples and draw them on our frame
         h = self.frame.shape[0]
         i = 0
@@ -84,6 +96,8 @@ class TrackedFrame:
             )
             i = i + 1
             # how the output frame
+
+    def save_frame(self):
         cv2.imwrite("output/%015d.png" % self.count, self.frame)
 
 
@@ -124,9 +138,9 @@ class auto_tracker:
         (success, box) = self.tracker.update(frame)
 
         if success:
-            return Box([int(v) for v in box])
+            return Box(box)
         else:
-            return Box([0, 0, 0, 0])
+            return Box([0]*4)
 
     def update_position(self, tframe):
         middle_x, middle_y = tframe.box.mid_xy()
@@ -174,7 +188,8 @@ class auto_tracker:
                     "Success": "Yes" if tframe.success else "No",
                     "FPS": "{:.2f}".format(fps_measure),
                 }
-                tframe.write_tracked_image(info)
+                tframe.draw_tracking(info)
+                tframe.save_frame()
 
             # option to quit with keyboard q
             key = cv2.waitKey(1) & 0xFF
