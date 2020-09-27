@@ -113,10 +113,9 @@ class auto_tracker():
 				cv2.imwrite("output/%015d.png"%count, frame)
 				key = cv2.waitKey(1) & 0xFF
 
-			if key == ord("q"):
-				exit()
+				if key == ord("q"):
+					exit()
 		p_fh.close()
->>>>>>> 5a30686c3adc64c6c8ce5302a4f48eb36bdc94a9
 
 
 if __name__ == "__main__":

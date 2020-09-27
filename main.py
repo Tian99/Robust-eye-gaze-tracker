@@ -11,7 +11,6 @@ from tracker import auto_tracker
 from extraction import extraction
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
-from eye_tracking.Track import fast_tracker
 from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 from Interface.video_player import VideoPlayer
@@ -110,11 +109,9 @@ class main(QtWidgets.QMainWindow):
 
         #Save file for the input of machine learning class
         # cv2.imwrite('input/search_case.png', new_dimension)
-
         print(ROI)
         t2 = threading.Thread(target=self.tracking, args=(ROI,))
         t2.start()
-        self.label_6.setText(str(int(self.label_6.text())+1))
         # t2.join()
 
     #This function also calls another thread which saves all video generated images in the output file
@@ -149,12 +146,11 @@ class main(QtWidgets.QMainWindow):
 
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
+
         #Only run the thread when the file is empty
         if not os.path.exists('output'):
             os.makedirs('output')
         dirls = os.listdir('output')
-        if len(dirls) == 0:
-            self.label_6.setText(str(int(self.label_6.text())+1))
             # t1.start()
 
         self.wanted = self.to_frame(self.Video)
