@@ -1,4 +1,5 @@
 from imutils.video import VideoStream
+from opticalFlow import opticalFlow
 from imutils.video import FPS
 import matplotlib.pyplot as plt
 import argparse
@@ -94,8 +95,8 @@ class auto_tracker:
         self, video_fname, bbox, tracker_name="kcf", write_img=True, max_frames=9e10
     ):
         # inputs
-        self.video_fname = video_fname
         self.iniBB = bbox
+        self.video_fname = video_fname
         self.tracker_name = tracker_name
 
         # settings
@@ -105,12 +106,22 @@ class auto_tracker:
         self.pupil_x = []
         self.pupil_y = []
         self.pupil_count = []
+        self.image_col = [] #Store the image for opticalflow analysis
         # output
         self.p_fh = None
+        #Set the optical flow matrix, needed to be incremented based on KCF
+        self.opticalBB = [self.iniBB[0], self.iniBB[1],\
+                          self.iniBB[2]+self.iniBB[0],\
+                          self.iniBB[3]+self.iniBB[1]]
 
         self.tracker = set_tracker(tracker_name)
         # this image is used to construct the image tracker
         first = cv2.imread("input/chosen_pic.png")
+        #Image for optical flow
+        #We have to rely on the user to correctly find the center... 
+        # test = first[self.opticalBB[0]:self.opticalBB[2], self.opticalBB[1]:self.opticalBB[3]]
+        # self.image_col.append(test)
+
         print("initializign tracking")
         self.tracker.init(first, self.iniBB)
         (success, box) = self.tracker.update(first)
@@ -150,9 +161,12 @@ class auto_tracker:
             tframe = TrackedFrame(vs.read()[1], count)
             if tframe.frame is None:
                 break
+            #Insert optical flow
+            #First need to determine the box length and width
+            if count > 500:
+                self.optimization()
             box = self.find_box(tframe.frame)
             tframe.set_box(box)
-
             # save positions to textfile and in this object
             self.update_position(tframe)
 
@@ -166,7 +180,9 @@ class auto_tracker:
                 print(
                     "@ step %d, midde = (%.02f, %02f); %.02f fps"
                     % (count, *tframe.box.mid_xy(), fps_measure)
+
                 )
+                tframe.write_tracked_image(info)
 
             if self.settings.get("write_img", True):
                 info = {
@@ -174,7 +190,6 @@ class auto_tracker:
                     "Success": "Yes" if tframe.success else "No",
                     "FPS": "{:.2f}".format(fps_measure),
                 }
-                tframe.write_tracked_image(info)
 
             # option to quit with keyboard q
             key = cv2.waitKey(1) & 0xFF
@@ -185,6 +200,13 @@ class auto_tracker:
         if self.p_fh:
             self.p_fh.close()
 
+      def optimization(self):
+
+
+    #Now try using first level optival optical without the gaussian pyramid
+    #See how it goes.
+    #Would run at a different rate than run_tracker. Therefore threads are required.
+        
 
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)

@@ -11,7 +11,7 @@ class opticalFlow:
 		self.ksobel = 5
 		self.width = 0
 		self.height = 0
-		self.dicti = {}
+
 		self.x = []
 		self.y = []
 		self.u = []
@@ -103,8 +103,6 @@ class opticalFlow:
 		# print(self.v)
 		return result
 
-
-
 	def preprocessing(self, img):
 		#Convert the imported frame to grey image
 		#Blue the grey image
@@ -113,7 +111,7 @@ class opticalFlow:
 		return blurImg
 
 if __name__ == '__main__':
-    #Later put into the user interface
-    image1 = cv2.imread('TestSeq/Shift0.png')
-    image2 = cv2.imread('TestSeq/ShiftR5U5.png')
-    opticalFlow(image1, image2)
+	#Later put into the user interface
+	image1 = cv2.imread('TestSeq/Shift0.png')
+	image2 = cv2.imread('TestSeq/ShiftR5U5.png')
+	opticalFlow(image1, image2)
