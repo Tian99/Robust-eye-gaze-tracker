@@ -25,7 +25,8 @@ Few existing pieces of research are targeting eye-gaze tracking[1,2,3,4], with m
 Machine Learning and Hough Transform to localize face and to analyze eye-gaze direction; Even though by using Hough Transform — A typical voting algorithm — could one achieve precision, its intolerance to noisy conditions, and subjection to heavy calculations make it less ideal to be implemented alone. Aslam2019
 Other popular algorithms include Feature-based Gaze Estimation, Model-based approaches, interpolation-based approaches. Without exceptions, all the fore-mentioned algorithms succumb to at least one of the following issues: Inaccuracy, Inefficient(slow), and un-robust to outer environment change. Yuan2013
 This article focuses on applying artificial neural network and has intense hardware setups to successfully, although imprecisely, track the eye-gaze direction. Considering it’s written in 2012, many approaches mentioned are outdated, yet still applicable and enlightening --number of convoluted layers in neural network, ways to avoid outliers to get better results, and calibration phase. Gneo2012
-Background and Rationale
+
+## Background and Rationale
 Proprietary solutions are provided by most hardware vendors but are not interchangeable and are difficult or impossible to extend. With the existing computer vision algorithms, gaze tracking could readily be achieved. However, challenges remain to precisely and promptly track gaze direction under noisy conditions as well as when the objects are hardly distinguishable from the background. The process involves four distinct parts.
 
 Filtering: Filter out any noise and outliers in the frames to only grab useful pixels for later analysis. Methods include generating the canny image, determining the threshold, and RANSAC analysis.
