@@ -1,14 +1,14 @@
-High Speed Noise Tolerant Eye-Gaze Tracker
+# High Speed Noise Tolerant Eye-Gaze Tracker
 Jiachen Tian
 
 Dr. Finn Calbro
 
 Swanson School of Engineering
 
-Objectives
+## Objectives
 I am proposing to research and develop a fully functioning eye gaze tracker that is fast, precise, and robust to interference. This implementation will be tested on previously recorded infrared videos of a participant’s eye during the Laboratory of Neurocognitive Development’s functional MRI tasks. The results will provide metrics needed to analyse participant performance.
 
-Introduction
+## Introduction
 This research intends to track participants’ eye gaze, providing an external but synchronized behavioral measure essential in analyzing models of functional MRI. The task consists of five repeated events instructing participants to make expected saccades to five established gaze positions. Each of these can be measured against an expected value to provide a score of each participant’s behavior.
 
 Object gazing at the center of the screen on cue.
@@ -18,7 +18,7 @@ Object gazing to where he or she remembered the image was.
 Object gazing back at the center of the screen on cue.
 To get the accurate difference between the object’s memorized location of the image from step 4 above and the coordinates where the image appeared from step 2 above, one should construct a 3-D gaze model by analyzing the relative position of the pupil and the glint created by infrared. Apart from being able to precisely track both the eye pupil and the glint, the tracker should operate in a noise-tolerant manner to cope with records from within a high magnetic field, artifacts from the fiber optic composite grid, and the limited field of view.
 
-Literature Review
+## Literature Review
 Few existing pieces of research are targeting eye-gaze tracking[1,2,3,4], with methods include:
 
 3D model-based gaze estimation methods which build on the assumption that similar eyes appearances/features correspond to similar gaze positions/directions; With the help of supervised learning, the tracker could potentially reach a speed of 30fps, but lack precision. Wang2017
