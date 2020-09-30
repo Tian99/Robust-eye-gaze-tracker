@@ -174,6 +174,7 @@ class auto_tracker:
             #Let KCF run first
             #////////////////////////  wait
             if count % 200 == 0 and count != 0:
+                print("Optical flow optimization")
                 self.optimization()
             #Here wait for the optical flow to complete
             #////////////////////////
@@ -212,7 +213,7 @@ class auto_tracker:
         if self.p_fh:
             self.p_fh.close()
 
-    def optimization(self):
+    def optimization(self, ):
         #Use opticalBB as the original optical flow tracker space. Might be smaller!!!!
         #Crop every image using this space
         #Key point, the optical flow image have to stay the same size. 
@@ -224,6 +225,10 @@ class auto_tracker:
             #Here the magic happens, slow magic tho
             opticalFlow(image1, image2)
             count += 1
+            print("progress @ %f percentage"%((count/200)*100))
+
+        #Clear the list for new data
+        self.image_col = []
 
             #Analyze two image at a time, image will overlap to construct continuous motion
             # iamge1 = self.image_col[i]

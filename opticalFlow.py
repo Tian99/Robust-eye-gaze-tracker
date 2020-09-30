@@ -54,7 +54,7 @@ class opticalFlow:
 		x_direct = []
 		y_direct = []
 
-		print(hi, wi)
+		# print(hi, wi)
 		#Get A
 		for i in range(size, hi):
 		    for j in range(size, wi):
