@@ -98,6 +98,7 @@ class auto_tracker:
         self.iniBB = bbox
         self.video_fname = video_fname
         self.tracker_name = tracker_name
+        self.image_cons = "input/chosen_pic.png"
 
         # settings
         self.settings = {"write_img": write_img, "max_frames": max_frames}
@@ -107,6 +108,7 @@ class auto_tracker:
         self.pupil_y = []
         self.pupil_count = []
         self.image_col = [] #Store the image for opticalflow analysis
+        self.cor_col = [] #Store all the coordinates collected by KCF tracker
         # output
         self.p_fh = None
         #Set the optical flow matrix, needed to be incremented based on KCF
@@ -116,11 +118,10 @@ class auto_tracker:
 
         self.tracker = set_tracker(tracker_name)
         # this image is used to construct the image tracker
-        first = cv2.imread("input/chosen_pic.png")
+        first = cv2.imread(self.image_cons)
         #Image for optical flow
-        #We have to rely on the user to correctly find the center... 
-        # test = first[self.opticalBB[0]:self.opticalBB[2], self.opticalBB[1]:self.opticalBB[3]]
-        # self.image_col.append(test)
+        #We have to rely on the user to correctly find the center for the first image because optical flow only track the motion... 
+        self.image_col.append(self.image_crop(first))
 
         print("initializign tracking")
         self.tracker.init(first, self.iniBB)
@@ -129,6 +130,9 @@ class auto_tracker:
         # file to save pupil location
         self.p_fh = open("output/points.csv", "w")
         self.p_fh.write("sample,x,y,r\n")
+
+    def image_crop(self, image):
+        return image[self.opticalBB[0]:self.opticalBB[2], self.opticalBB[1]:self.opticalBB[3]]
 
     def find_box(self, frame):
         self.tracker.init(frame, self.iniBB)
@@ -141,6 +145,7 @@ class auto_tracker:
 
     def update_position(self, tframe):
         middle_x, middle_y = tframe.box.mid_xy()
+        self.cor_col.append([middle_x, middle_y]) #For optical flow analysis
 
         # print(x,y,w,h)
         # TODO: get pupil radius.
@@ -161,10 +166,17 @@ class auto_tracker:
             tframe = TrackedFrame(vs.read()[1], count)
             if tframe.frame is None:
                 break
+
+            #Store every image into list for later optical flow analysis.
+            self.image_col.append(self.image_crop(tframe.frame))
+
             #Insert optical flow
-            #First need to determine the box length and width
-            if count > 500:
+            #Let KCF run first
+            #////////////////////////  wait
+            if count % 200 == 0 and count != 0:
                 self.optimization()
+            #Here wait for the optical flow to complete
+            #////////////////////////
             box = self.find_box(tframe.frame)
             tframe.set_box(box)
             # save positions to textfile and in this object
@@ -200,7 +212,28 @@ class auto_tracker:
         if self.p_fh:
             self.p_fh.close()
 
-      def optimization(self):
+    def optimization(self):
+        #Use opticalBB as the original optical flow tracker space. Might be smaller!!!!
+        #Crop every image using this space
+        #Key point, the optical flow image have to stay the same size. 
+        #When later optimize the space using KCF tracking, remember to keep the original size
+        count = 0
+        while count <= len(self.image_col):
+            image1 = self.image_col[count]
+            image2 = self.image_col[count + 1]
+            #Here the magic happens, slow magic tho
+            opticalFlow(image1, image2)
+            count += 1
+
+            #Analyze two image at a time, image will overlap to construct continuous motion
+            # iamge1 = self.image_col[i]
+            # image2 = self.image_col[i+1]
+
+
+
+
+
+
 
 
     #Now try using first level optival optical without the gaussian pyramid
