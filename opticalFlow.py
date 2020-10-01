@@ -4,21 +4,24 @@ from Gradient import gradient
 from matplotlib import pyplot as plt
 
 class opticalFlow:
-	def __init__(self, image1, image2, address = None):
+	def __init__(self, image1, image2, count, address = None):
 	
 		#Read two image first
 		self.image1 = image1 
 		self.image2 = image2
 		self.address = address
+		self.count = count
+		self.index_map = {}
 		#Define kernal size for scanning
 		self.op_flow()
 
 	def op_flow(self):
 		#Determine the kernal size
-		size = 8
+		size = 15
+
 		#Gaussian blur the image(kernal height and width)
-		image_1 = cv2.GaussianBlur(self.image1,(15,15), cv2.BORDER_DEFAULT)
-		image_2 = cv2.GaussianBlur(self.image2,(15,15), cv2.BORDER_DEFAULT)
+		image_1 = cv2.GaussianBlur(self.image1,(21,21), cv2.BORDER_DEFAULT)
+		image_2 = cv2.GaussianBlur(self.image2,(21,21), cv2.BORDER_DEFAULT)
 
 		#Only get the size and width of image_1
 		hi = image_1.shape[0]
@@ -94,37 +97,41 @@ class opticalFlow:
 
 		        # print('\n')
 		        
+
+		        self.index_map[(i, j)] = (x, -y)
 		        x_pos.append(j)
 		        y_pos.append(i)
 		        x_direct.append(x)
 		        y_direct.append(-y)
 
-# 		new_x_pos = []
-# 		new_y_pos = []
-# 		new_x_direct = []
-# 		new_y_direct = []
-
-# 		#Easier to see when printed this way
-# 		for i in range(0, len(x_pos), 40):
-# 		    new_x_pos.append(x_pos[i])
-# 		    new_y_pos.append(y_pos[i])
-# 		    new_x_direct.append(x_direct[i])
-# 		    new_y_direct.append(y_direct[i])
-
-# 		#Print the stuffs on the image
-# 		fig, ax = plt.subplots()
-
-# 		#Read in the background image only the first one
-# 		img = plt.imread("optical_flow_output0.png")
-# 		ax.imshow(img)
-# 		ax.quiver(new_x_pos,new_y_pos,new_x_direct,new_y_direct, color='r')
-# 		plt.savefig('output/testing.png')
 
 
-# if __name__ == '__main__':
-#     #Later put into the user interface
-#     address1 = 'input/TestSeq/ShiftR5U5.png'
-#     address2 = 'input/TestSeq/Shift0.png'
-#     image1 = cv2.imread(address1)
-#     image2 = cv2.imread(address2)
-#     opticalFlow(image1, image2, address1)
+		new_x_pos = []
+		new_y_pos = []
+		new_x_direct = []
+		new_y_direct = []
+
+		#Easier to see when printed this way
+		for i in range(0, len(x_pos), 40):
+		    new_x_pos.append(x_pos[i])
+		    new_y_pos.append(y_pos[i])
+		    new_x_direct.append(x_direct[i])
+		    new_y_direct.append(y_direct[i])
+
+		#Print the stuffs on the image
+		fig, ax = plt.subplots()
+
+		#Read in the background image only the first one
+		img = self.image1
+		ax.imshow(img)
+		ax.quiver(new_x_pos,new_y_pos,new_x_direct,new_y_direct, color='r')
+		# plt.savefig('opflow_test/output/%d.png'%self.count)
+
+
+if __name__ == '__main__':
+    #Later put into the user interface
+    address1 = 'input/TestSeq/ShiftR5U5.png'
+    address2 = 'input/TestSeq/Shift0.png'
+    image1 = cv2.imread(address1)
+    image2 = cv2.imread(address2)
+    opticalFlow(image1, image2, address1)

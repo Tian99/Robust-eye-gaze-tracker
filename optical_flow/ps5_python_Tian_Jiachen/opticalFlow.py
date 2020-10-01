@@ -15,10 +15,12 @@ class opticalFlow:
 
 	def op_flow(self):
 		#Determine the kernal size
-		size = 15
+		size = 8
 		#Gaussian blur the image(kernal height and width)
-		image_1 = cv2.GaussianBlur(self.image1,(21,21), cv2.BORDER_DEFAULT)
-		image_2 = cv2.GaussianBlur(self.image2,(21,21), cv2.BORDER_DEFAULT)
+		image_1 = cv2.blur(self.image1,(15, 15))
+		image_2 = cv2.blur(self.image2,(15, 15))
+
+		cv2.imwrite("test.png", image_2)
 
 		#Only get the size and width of image_1
 		hi = image_1.shape[0]
