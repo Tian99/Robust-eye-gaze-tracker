@@ -15,10 +15,10 @@ class opticalFlow:
 
 	def op_flow(self):
 		#Determine the kernal size
-		size = 40
+		size = 15
 		#Gaussian blur the image(kernal height and width)
-		image_1 = cv2.GaussianBlur(self.image1,(11,11), cv2.BORDER_DEFAULT)
-		image_2 = cv2.GaussianBlur(self.image2,(11,11), cv2.BORDER_DEFAULT)
+		image_1 = cv2.GaussianBlur(self.image1,(21,21), cv2.BORDER_DEFAULT)
+		image_2 = cv2.GaussianBlur(self.image2,(21,21), cv2.BORDER_DEFAULT)
 
 		#Only get the size and width of image_1
 		hi = image_1.shape[0]
@@ -114,13 +114,13 @@ class opticalFlow:
 		img = plt.imread(self.address)
 		ax.imshow(img)
 		ax.quiver(new_x_pos,new_y_pos,new_x_direct,new_y_direct, color='r')
-		plt.savefig('output/testing.png')
+		plt.savefig('testing.png')
 
 
 if __name__ == '__main__':
     #Later put into the user interface
-    address1 = 'input/DataSeq1/yos_img_01.jpg'
-    address2 = 'input/DataSeq1/test.png'
+    address1 = 'optical_flow_test/image126.png'
+    address2 = 'optical_flow_test/image127.png'
     image1 = cv2.imread(address1)
     image2 = cv2.imread(address2)
     opticalFlow(image1, image2, address1)

@@ -219,13 +219,14 @@ class auto_tracker:
         #Key point, the optical flow image have to stay the same size. 
         #When later optimize the space using KCF tracking, remember to keep the original size
         count = 0
-        while count <= len(self.image_col):
+        while count < len(self.image_col)-1:
             image1 = self.image_col[count]
+            cv2.imwrite("output/image%d.png"%count,image1)
             image2 = self.image_col[count + 1]
+            # cv2.imwrite("output/image%d.png", image2)
             #Here the magic happens, slow magic tho
-            opticalFlow(image1, image2)
+            # opticalFlow(image1, image2)
             count += 1
-            print("progress @ %f percentage"%((count/200)*100))
 
         #Clear the list for new data
         self.image_col = []

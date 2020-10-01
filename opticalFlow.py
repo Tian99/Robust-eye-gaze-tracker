@@ -15,10 +15,10 @@ class opticalFlow:
 
 	def op_flow(self):
 		#Determine the kernal size
-		size = 40
+		size = 8
 		#Gaussian blur the image(kernal height and width)
-		image_1 = cv2.GaussianBlur(self.image1,(11,11), cv2.BORDER_DEFAULT)
-		image_2 = cv2.GaussianBlur(self.image2,(11,11), cv2.BORDER_DEFAULT)
+		image_1 = cv2.GaussianBlur(self.image1,(15,15), cv2.BORDER_DEFAULT)
+		image_2 = cv2.GaussianBlur(self.image2,(15,15), cv2.BORDER_DEFAULT)
 
 		#Only get the size and width of image_1
 		hi = image_1.shape[0]
@@ -78,7 +78,11 @@ class opticalFlow:
 
 		        # print(np.linalg.inv(A))
 
-		        result = np.dot(np.linalg.inv(A), R)
+		        try:
+		        	result = np.dot(np.linalg.inv(A), R)
+		        except np.linalg.LinAlgError:
+		        	continue
+
 		        x = result[0][0]
 		        y = result[1][0]
 		        
@@ -95,34 +99,32 @@ class opticalFlow:
 		        x_direct.append(x)
 		        y_direct.append(-y)
 
-		# 	print("\n\n")
+# 		new_x_pos = []
+# 		new_y_pos = []
+# 		new_x_direct = []
+# 		new_y_direct = []
 
-		# new_x_pos = []
-		# new_y_pos = []
-		# new_x_direct = []
-		# new_y_direct = []
+# 		#Easier to see when printed this way
+# 		for i in range(0, len(x_pos), 40):
+# 		    new_x_pos.append(x_pos[i])
+# 		    new_y_pos.append(y_pos[i])
+# 		    new_x_direct.append(x_direct[i])
+# 		    new_y_direct.append(y_direct[i])
 
-		# #Easier to see when printed this way
-		# for i in range(0, len(x_pos), 40):
-		#     new_x_pos.append(x_pos[i])
-		#     new_y_pos.append(y_pos[i])
-		#     new_x_direct.append(x_direct[i])
-		#     new_y_direct.append(y_direct[i])
+# 		#Print the stuffs on the image
+# 		fig, ax = plt.subplots()
 
-		# #Print the stuffs on the image
-		# fig, ax = plt.subplots()
-
-		# #Read in the background image only the first one
-		# img = plt.imread(self.address)
-		# ax.imshow(img)
-		# ax.quiver(new_x_pos,new_y_pos,new_x_direct,new_y_direct, color='r')
-		# plt.savefig('output/testing.png')
+# 		#Read in the background image only the first one
+# 		img = plt.imread("optical_flow_output0.png")
+# 		ax.imshow(img)
+# 		ax.quiver(new_x_pos,new_y_pos,new_x_direct,new_y_direct, color='r')
+# 		plt.savefig('output/testing.png')
 
 
-if __name__ == '__main__':
-    #Later put into the user interface
-    address1 = 'input/TestSeq/ShiftR5U5.png'
-    address2 = 'input/TestSeq/Shift0.png'
-    image1 = cv2.imread(address1)
-    image2 = cv2.imread(address2)
-    opticalFlow(image1, image2, address1)
+# if __name__ == '__main__':
+#     #Later put into the user interface
+#     address1 = 'input/TestSeq/ShiftR5U5.png'
+#     address2 = 'input/TestSeq/Shift0.png'
+#     image1 = cv2.imread(address1)
+#     image2 = cv2.imread(address2)
+#     opticalFlow(image1, image2, address1)
