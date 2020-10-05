@@ -8,7 +8,6 @@ import threading
 import os, shutil
 import numpy as np
 from tracker import auto_tracker
-from extraction import extraction
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
@@ -57,6 +56,7 @@ class main(QtWidgets.QMainWindow):
     def tracking(self, ROI):
         #Initialize the eye_tracker
         track = auto_tracker(self.Video, ROI)
+        track.set_events(self.File)
         track.run_tracker()
 
     def video_call(self):
@@ -136,14 +136,6 @@ class main(QtWidgets.QMainWindow):
 
         print('Start writing images to the file\n')
         print('start reading in files')
-
-        #self.collection = {cue, vgs, dly, mgs}
-        self.collection = extraction(self.File)
-        # print(self.collection)
-        #Try get the video frame next time
-        for key, data in self.collection.items():
-            self.p_r_collection[key] = [element * self.f_rate for element in data]
-        print(self.p_r_collection)
 
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
