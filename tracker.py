@@ -143,7 +143,7 @@ class auto_tracker:
     def set_events(self, csv_fname):
         """set task event info from csv_filename"""
         self.onset_labels = extraction(csv_fname)
-        self.onset_labels['onset_frame'] = self.onset_labels.onset*self.settings['fps']
+        self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
     def find_box(self, frame):
         self.tracker.init(frame, self.iniBB)
@@ -215,6 +215,14 @@ class auto_tracker:
         if self.p_fh:
             self.p_fh.close()
             
+    def event_at(self, frame_number):
+        """what event is at frame number"""
+        up_to_idx = self.onset_labels['onset_frame'] <= frame_number
+        event_row = self.onset_labels[up_to_idx].tail(1).reset_index()
+        if len(event_row) == 0:
+            return {'event': ["None"], 'side': ["None"]}
+        return event_row
+
     def draw_event(self, frame, frame_number):
         """draw what event we are in if we have onset_labels
         @param frame - frame to draw on (modify in place)
@@ -223,23 +231,24 @@ class auto_tracker:
             return
 
         positions = {'Left': 0, 'NearLeft': .25, 'NearRight': .75, 'Right': .9}
-        symbols = {'cue': '+',
-                   'vgs': '#',
-                   'dly': '%',
-                   'mgs': '*',
-                   'iti': 'x'}
-        colors = {'cue': (0, 0, 255),
+        symbols = {'cue': 'C',
+                   'vgs': 'V',
+                   'dly': 'D',
+                   'mgs': 'M',
+                   'iti': 'I',
+                   'None': 'X'}
+        colors = {'cue': (100, 100, 255),
                   'vgs': (255, 0, 255),
                   'dly': (0, 255, 255),
                   'mgs': (255, 255, 255),
-                  'iti': (0, 0, 255)}
+                  'iti': (0, 0, 255),
+                  'None': (255, 255, 255)}
         w = frame.shape[1]
 
-        up_to_idx = self.onset_labels['onset'] < frame_number
-        event_row = self.onset_labels[up_to_idx].tail(1).reset_index()
+        event_row = self.event_at(frame_number)
 
         event = event_row['event'][0]
-        if event in ['dly', 'mgs']:
+        if event in ['vgs', 'mgs']:
             event_pos = positions[event_row['side'][0]]
         else:
             event_pos = .5
