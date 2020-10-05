@@ -17,7 +17,7 @@ Options:
   --version     Show version.
 
 Example:
-   ./vid_track input/run1.mov input/10997_20180818_mri_1_view.csv --start 40 --dur 4
+   ./cli.py input/run1.mov input/10997_20180818_mri_1_view.csv --start 6 --dur 6
 
 """
 from docopt import docopt
@@ -27,7 +27,6 @@ from extraction import extraction
 if __name__ == '__main__':
     args = docopt(__doc__, version='VidTrack 0.1')
     # print(args); exit()
-    behave = extraction(args['<behave.csv>'])
 
     init_box = tuple([int(x) for x in args['--box'].split(',')])
     print(init_box)
@@ -42,7 +41,7 @@ if __name__ == '__main__':
                          write_img=False,
                          tracker_name=tracker_name, max_frames=max_frames,
                          start_frame=start_frame)
+    track.set_events(args['<behave.csv>'])
     track.run_tracker()
-    
-    tracker.annotated_image()
+    track.annotated_plt()
 
