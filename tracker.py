@@ -1,10 +1,10 @@
 from imutils.video import VideoStream
 from imutils.video import FPS
-import matplotlib.pyplot as plt
 import argparse
 import imutils
 import time
 import cv2
+from extraction import extraction
 
 OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
@@ -85,6 +85,7 @@ class TrackedFrame:
         text_color = (0, 0, 255)
 
         self.box.draw_box(self.frame)
+
         # Loop over the info tuples and draw them on our frame
         h = self.frame.shape[0]
         i = 0
@@ -105,15 +106,20 @@ class auto_tracker:
     """eye tracker"""
 
     def __init__(
-        self, video_fname, bbox, tracker_name="kcf", write_img=True, max_frames=9e10
+        self, video_fname, bbox, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
         # inputs
         self.video_fname = video_fname
         self.iniBB = bbox
         self.tracker_name = tracker_name
+        self.onset_labels = None  # see set_events
 
         # settings
-        self.settings = {"write_img": write_img, "max_frames": max_frames}
+        self.settings = {
+            "write_img": write_img,
+            "max_frames": max_frames,
+            "start_frame": start_frame,
+            "fps": 60}
 
         # accumulators
         self.pupil_x = []
@@ -125,13 +131,19 @@ class auto_tracker:
         self.tracker = set_tracker(tracker_name)
         # this image is used to construct the image tracker
         first = cv2.imread("input/chosen_pic.png")
-        print("initializign tracking")
+        print(f"initializign tracking @ {start_frame} frame")
         self.tracker.init(first, self.iniBB)
         (success, box) = self.tracker.update(first)
 
         # file to save pupil location
-        self.p_fh = open("output/points.csv", "w")
-        self.p_fh.write("sample,x,y,r\n")
+        if self.settings['write_img']:
+            self.p_fh = open("output/points.csv", "w")
+            self.p_fh.write("sample,x,y,r\n")
+
+    def set_events(self, csv_fname):
+        """set task event info from csv_filename"""
+        self.onset_labels = extraction(csv_fname)
+        self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
     def find_box(self, frame):
         self.tracker.init(frame, self.iniBB)
@@ -148,15 +160,17 @@ class auto_tracker:
         # print(x,y,w,h)
         # TODO: get pupil radius.
         # TODO: if not success is count off? need count for timing
-        self.p_fh.write("%d,%d,%d,NA\n" % (tframe.count, middle_x, middle_y))
+        if self.p_fh:
+            self.p_fh.write("%d,%d,%d,NA\n" % (tframe.count, middle_x, middle_y))
 
         self.pupil_x.append(middle_x)
         self.pupil_y.append(middle_y)
         self.pupil_count.append(tframe.count)
 
     def run_tracker(self):
-        count = 0
+        count = self.settings['start_frame']
         vs = cv2.VideoCapture(self.video_fname)
+        vs.set(1, count)
         while True and count < self.settings["max_frames"]:
             count += 1
             fps = FPS().start()
@@ -178,7 +192,7 @@ class auto_tracker:
             # only print every 250 frames. printing is slow
             if count % 250 == 0:
                 print(
-                    "@ step %d, midde = (%.02f, %02f); %.02f fps"
+                    "@ step %d, center = (%.02f, %.02f); %.02f fps"
                     % (count, *tframe.box.mid_xy(), fps_measure)
                 )
 
@@ -189,6 +203,7 @@ class auto_tracker:
                     "FPS": "{:.2f}".format(fps_measure),
                 }
                 tframe.draw_tracking(info)
+                self.draw_event(tframe.frame, count)
                 tframe.save_frame()
 
             # option to quit with keyboard q
@@ -199,6 +214,73 @@ class auto_tracker:
         print("Ending of the analysis")
         if self.p_fh:
             self.p_fh.close()
+            
+    def event_at(self, frame_number):
+        """what event is at frame number"""
+        up_to_idx = self.onset_labels['onset_frame'] <= frame_number
+        event_row = self.onset_labels[up_to_idx].tail(1).reset_index()
+        if len(event_row) == 0:
+            return {'event': ["None"], 'side': ["None"]}
+        return event_row
+
+    def draw_event(self, frame, frame_number):
+        """draw what event we are in if we have onset_labels
+        @param frame - frame to draw on (modify in place)
+        @param frame_number - how far into the task are we 'count' elsewhere"""
+        if self.onset_labels is None:
+            return
+
+        positions = {'Left': 0, 'NearLeft': .25, 'NearRight': .75, 'Right': .9}
+        symbols = {'cue': 'C',
+                   'vgs': 'V',
+                   'dly': 'D',
+                   'mgs': 'M',
+                   'iti': 'I',
+                   'None': 'X'}
+        colors = {'cue': (100, 100, 255),
+                  'vgs': (255, 0, 255),
+                  'dly': (0, 255, 255),
+                  'mgs': (255, 255, 255),
+                  'iti': (0, 0, 255),
+                  'None': (255, 255, 255)}
+        w = frame.shape[1]
+
+        event_row = self.event_at(frame_number)
+
+        event = event_row['event'][0]
+        if event in ['vgs', 'mgs']:
+            event_pos = positions[event_row['side'][0]]
+        else:
+            event_pos = .5
+        draw_pos =  (int(event_pos * w), 15)
+        draw_sym = symbols[event]
+        cv2.putText(
+            frame, draw_sym, draw_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, colors[event], 2
+        )
+    def annotated_plt(self):
+        """plot tracked x position.
+        annotate with eye box images and imort timing events
+        cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
+        """
+        import matplotlib.pyplot as plt
+        event_colors = {'cue': 'k', 'vgs': 'g', 'dly': 'b', 'mgs': 'r'}
+        first_frame = self.settings['start_frame']
+        last_frame = self.settings['max_frames']
+
+        # blinks get center xpos of 0. exclude those so we can zoom in on interesting things
+        plt.plot([float('nan') if x==0 else x for x in self.pupil_x])
+
+        d = self.onset_labels
+        in_range = (d.onset_frame >= first_frame) & (d.onset_frame <= last_frame)
+        d = d[in_range]
+        ymax = max(self.pupil_x)
+        ymin = min([x for x in self.pupil_x if x > 0])
+        colors = [event_colors[x] for x in d.event]
+        event_frames = d.onset_frame - first_frame
+        plt.vlines(event_frames, ymin, ymax, color=colors)
+        plt.show()
+        
+
 
 
 if __name__ == "__main__":
