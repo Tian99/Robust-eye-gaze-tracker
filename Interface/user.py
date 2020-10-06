@@ -25,17 +25,12 @@ class MyWidget(QtWidgets.QWidget):
         br = QtGui.QBrush(QtGui.QColor(100, 90, 10, 90))  
         qp.setBrush(br)   
         qp.drawRect(QtCore.QRect(self.begin, self.end))
+
         qp.drawLine(self.begin, self.end)
         qp.drawLine(self.end.x(),\
                     self.begin.y(),\
                     self.begin.x(),\
                     self.end.y())
-
-        # TODO: these are unused? remove
-        begin_x = self.begin.x()
-        begin_y = self.begin.y()
-        end_x = self.end.x()
-        end_y = self.end.y()
 
     def mousePressEvent(self, event):
         self.begin = event.pos()
