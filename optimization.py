@@ -10,7 +10,7 @@ import math
 #threshold: somewhat correct
 #raiuds: way smaller for the actual frame
 class fast_tracker:
-	def __init__(self, img, blur=(16,16), canny=(40, 50), threshold=(90, 120), radius=(230, 300)):
+	def __init__(self, img, blur=(16,16), canny=(40, 50), threshold=(90, 120), radius=(230, 300), CPI = None):
 		#the frame is a bit different than the img it is testing here!
 		self.img = img
 		self.blur = blur
@@ -52,18 +52,18 @@ class fast_tracker:
 		return edges
 
 	#Here comes the hard one, how to find the exact coordinate of the pupil and the glint
-	def hough_transform(self, img):
+	def hough_transform(self, img, area):
 		#Right now it's just the very basic hough transform, improve later
 		#Keep an origional image to see what the result looks like
-		height = img.shape[0]
-		width = img.shape[1]
+		# height = img.shape[0]
+		# width = img.shape[1]
 
 		Rmin = self.radius[0]
 		Rmax = self.radius[1]
 		#accumulator is pretty much a voting dictionary
 		accumulator = {}
-		for y in range(0, height):
-			for x in range(0, width):
+		for y in range(0, area[0]):
+			for x in range(0, area[1]):
 				#If an edge pixel is found
 				if img.item(y, x) >= 255:
 					for r in range(Rmin, Rmax, 2):
@@ -72,7 +72,7 @@ class fast_tracker:
 							x0 = int(x-(r*math.cos(math.radians(t))))
 							y0 = int(y-(r*math.sin(math.radians(t))))
 							#Checking if the center is within the range of image
-							if x0 > 0 and x0 < width and y0 > 0 and y0 < height:
+							if x0 > 0 and x0 < area[1] and y0 > 0 and y0 < area[1]:
 								if (x0, y0, r) in accumulator:
 									#Here the voting provess begins
 									accumulator[(x0, y0, r)]=accumulator[x0, y0, r]+1
@@ -98,13 +98,16 @@ class fast_tracker:
 			accumulator[max_coordinate] = 0
 		print(max_cor)
 		print(max_collec)
-		for x, y, r in max_cor:
-			circled_cases = cv2.circle(self.img, (x, y), r, (0,0,255))
-			cv2.imwrite('test.png', circled_cases)
+
+		return (max_cor, max_collec)
+
+		# for x, y, r in max_cor:
+		# 	circled_cases = cv2.circle(self.img, (x, y), r, (0,0,255))
+		# 	cv2.imwrite('test.png', circled_cases)
 
 if __name__ == '__main__':
 	img = cv2.imread('../input/search_case.png')
 	APP = fast_tracker(img)
 	output = APP.prepossing()
-	APP.hough_transform(output)
+	APP.hough_transform(output, area)
 	cv2.imwrite('image.png', output)

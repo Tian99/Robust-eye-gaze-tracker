@@ -103,14 +103,20 @@ class main(QtWidgets.QMainWindow):
         [self.cropping_factor[1][0] : self.cropping_factor[1][1],\
         self.cropping_factor[0][0] : self.cropping_factor[0][1]]
 
+        #Cropping factor for KCF tracker
         ROI = (self.cropping_factor[0][0],\
                self.cropping_factor[1][0],\
                self.cropping_factor[0][1] - self.cropping_factor[0][0],\
                self.cropping_factor[1][1] - self.cropping_factor[1][0]) 
 
+        #Cropping factor for pre-processing
+        self.CPI = self.cropping_factor
+        #Calculate the center of the pupil
+        self.center = (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
         #Save file for the input of machine learning class
         # cv2.imwrite('input/search_case.png', new_dimension)
         print(ROI)
+        print("Start preprocessing")
         t2 = threading.Thread(target=self.tracking, args=(ROI,))
         t2.start()
         # t2.join()
