@@ -37,18 +37,18 @@ class fast_tracker:
 		gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 		#Blurring Method
 		blurImg = cv2.blur(gray_image,(self.blur[0], self.blur[1]))
-		cv2.imwrite('sample1.png', blurImg)  
+		# cv2.imwrite('sample1.png', blurImg)  
 		return blurImg
 
 	#This method is crucial to get a better canny image
 	def threshold_img(self, img):
 	    _, proc = cv2.threshold(img, self.threshold[0], self.threshold[1], cv2.THRESH_BINARY) 
-	    cv2.imwrite('sample2.png', proc)
+	    # cv2.imwrite('sample2.png', proc)
 	    return proc 
 
 	def canny_img(self, img):
 		edges = cv2.Canny(img, self.canny[0], self.canny[1])
-		cv2.imwrite('sample3.png', edges)
+		# cv2.imwrite('sample3.png', edges)
 		return edges
 
 	#Here comes the hard one, how to find the exact coordinate of the pupil and the glint
@@ -62,12 +62,12 @@ class fast_tracker:
 		Rmax = self.radius[1]
 		#accumulator is pretty much a voting dictionary
 		accumulator = {}
-		for y in range(0, area[0]):
-			for x in range(0, area[1]):
+		for y in range(area[0], area[1]):
+			for x in range(area[2], area[3]):
 				#If an edge pixel is found
 				if img.item(y, x) >= 255:
-					for r in range(Rmin, Rmax, 2):
-						for t in range(0, 360, 2):
+					for r in range(Rmin, Rmax, 4):
+						for t in range(0, 360, 4):
 							#Cast it to a new cooedinates
 							x0 = int(x-(r*math.cos(math.radians(t))))
 							y0 = int(y-(r*math.sin(math.radians(t))))
@@ -82,7 +82,7 @@ class fast_tracker:
 		max_collec = [] #Set that stores the max number
 		max_coordinate = None
 		max_value = 0
-		count = 2
+		count = 5
 
 		for i in range(count):
 			for k, v in accumulator.items():
