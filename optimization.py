@@ -10,7 +10,7 @@ import math
 #threshold: somewhat correct
 #raiuds: way smaller for the actual frame
 class fast_tracker:
-	def __init__(self, img, blur=(16,16), canny=(40, 50), threshold=(90, 120), radius=(230, 300), CPI = None):
+	def __init__(self, img, threshold=(90, 120), blur=(10,10), canny=(40, 50), radius=(230, 300), CPI = None):
 		#the frame is a bit different than the img it is testing here!
 		self.img = img
 		self.blur = blur
@@ -96,7 +96,9 @@ class fast_tracker:
 			max_cor.append(max_coordinate)
 			#zero out position
 			accumulator[max_coordinate] = 0
+		print("Maximum coordinates:")
 		print(max_cor)
+		print("Maximum Votes:")
 		print(max_collec)
 
 		return (max_cor, max_collec)
