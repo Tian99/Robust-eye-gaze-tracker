@@ -113,6 +113,8 @@ class auto_tracker:
         self.iniBB = bbox
         self.tracker_name = tracker_name
         self.onset_labels = None  # see set_events
+        #Threshold for hough transform
+        self.threshold = (0, 0)
 
         # settings
         self.settings = {
@@ -129,6 +131,7 @@ class auto_tracker:
         self.p_fh = None
 
         self.tracker = set_tracker(tracker_name)
+        #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
         first = cv2.imread("input/chosen_pic.png")
         print(f"initializign tracking @ {start_frame} frame")

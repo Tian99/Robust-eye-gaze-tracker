@@ -10,7 +10,7 @@ import math
 #threshold: somewhat correct
 #raiuds: way smaller for the actual frame
 class fast_tracker:
-	def __init__(self, img, threshold=(90, 120), blur=(10,10), canny=(40, 50), radius=(230, 300), CPI = None):
+	def __init__(self, img, threshold=None, blur=None, canny=None, radius=None):
 		#the frame is a bit different than the img it is testing here!
 		self.img = img
 		self.blur = blur

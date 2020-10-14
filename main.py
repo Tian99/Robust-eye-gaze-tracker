@@ -13,6 +13,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 from Interface.video_player import VideoPlayer
+from preProcess import preprocess
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -115,8 +116,11 @@ class main(QtWidgets.QMainWindow):
         self.center = (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
         #Save file for the input of machine learning class
         # cv2.imwrite('input/search_case.png', new_dimension)
-        print(ROI)
-        print("Start preprocessing")
+        print("Run Preprocessing")
+        #Preprocess automatically reads in the image
+        pp = preprocess(self.center, self.CPI) #The first None is the area, will include later
+        th_range = pp.start()
+        print("Threshold range: ", th_range)
         t2 = threading.Thread(target=self.tracking, args=(ROI,))
         t2.start()
         # t2.join()

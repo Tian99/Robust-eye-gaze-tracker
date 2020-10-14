@@ -28,19 +28,20 @@ class preprocess:
 
         self.search_area = (int(self.cropping_factor[1][0]/self.factor[0]), int(self.cropping_factor[1][1]/self.factor[0]), \
                             int(self.cropping_factor[0][0]/self.factor[1]), int(self.cropping_factor[0][1]/self.factor[1]))
+
+
         #Guessed radius########################################
         #Radius_h is divided by two because it's a radiussss
         self.radius_h = int(min(self.cropping_factor[0][1] - self.cropping_factor[0][0],\
                      self.cropping_factor[1][1] - self.cropping_factor[1][0])/2) #Minimum of croping displacement is closer to radius
 
-        self.radius_l = 10 #Initialize to 20 for now, later change based on the size of glint
+        self.radius_l = 10 #Initialize to 10 for now, later change based on the size of glint
 
         #normalize it as well.
         self.radius = (int(self.radius_l/self.factor[0]), int(self.radius_h/self.factor[1]))
 
-
         #GUessed threshold#####################################
-        self.threshold_range = (50, 255) #to iterate through everything.
+        self.threshold_range = (50, 250) #to iterate through everything.
         #Loop through all the threshold possible to find the best threshold rang
 
     def start(self):
@@ -49,7 +50,7 @@ class preprocess:
         ideal_center = None
         for i in range(self.threshold_range[0], self.threshold_range[1], 5):
             for j in range(i, self.threshold_range[1]-50, 10):
-                setup = fast_tracker(self.cropped, self.blur, self.canny, (i, j), self.radius) #Might be slow
+                setup = fast_tracker(self.cropped, (i, j), self.blur, self.canny, self.radius) #Might be slow
                 processed = setup.prepossing() #Processed image using the guessed parameters
                 #Run the Hough Transfom, a voting algorithm that will analysis the legidity of processed image.
                 #Result is [coordinate] and [max voting]
@@ -61,7 +62,7 @@ class preprocess:
                 print(i, j)
                 print("\n")
 
-        return (ideal_thresh, ideal_center) 
+        return (ideal_thresh) 
 
 
 
