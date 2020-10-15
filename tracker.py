@@ -5,6 +5,8 @@ import imutils
 import time
 import cv2
 from extraction import extraction
+from optimization import fast_tracker
+from HTimp import HTimp
 
 OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
@@ -15,7 +17,6 @@ OPENCV_OBJECT_TRACKERS = {
     "medianflow": cv2.TrackerMedianFlow_create,
     "mosse": cv2.TrackerMOSSE_create,
 }
-
 
 def set_tracker(tracker_name):
     """tracker definition depends on opencv version"""
@@ -34,7 +35,6 @@ def set_tracker(tracker_name):
     # grab the appropriate object tracker using our dictionary of
     # OpenCV object tracker objects
     return OPENCV_OBJECT_TRACKERS[tracker_name]()
-
 
 class Box:
     """ wrapper for boxed pupil location from tracker"""
@@ -62,7 +62,19 @@ class Box:
     def __repr__(self):
         return f'({self.x},{self.y}) {self.w}x{self.h}' 
 
+class Circle:
+    """ wrapper for circled pupil location from tracker"""
 
+    def __init__(self, circlecoords):
+        print(circlecoords)
+        circlecoords = (int(x) for x in circlecoords)
+        self.x, self.y, self.r = circlecoords
+
+    def draw_circle(self, frame):
+        circle_color = (255, 0, 0)
+        center_color = (255, 0, 0)
+        cv2.circle(frame, (self.x, self.y), self.r, circle_color, 2)
+        cv2.circle(frame, (self.x, self.y), 5, center_color, -1)
 
 class TrackedFrame:
     """a frame and it's tracking info"""
@@ -77,6 +89,9 @@ class TrackedFrame:
         self.box = box
         self.success = self.box.w != 0
 
+    def set_circle(self, circle):
+        self.circle = circle
+
     def draw_tracking(self, text_info):
         """add bouding box and pupil center to image
         add text from text_info dict
@@ -85,6 +100,7 @@ class TrackedFrame:
         text_color = (0, 0, 255)
 
         self.box.draw_box(self.frame)
+        self.circle.draw_circle(self.frame)
 
         # Loop over the info tuples and draw them on our frame
         h = self.frame.shape[0]
@@ -101,35 +117,32 @@ class TrackedFrame:
     def save_frame(self):
         cv2.imwrite("output/%015d.png" % self.count, self.frame)
 
-
 class auto_tracker:
     """eye tracker"""
 
     def __init__(
-        self, video_fname, bbox, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
+        self, video_fname, bbox, parameters, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
         # inputs
         self.video_fname = video_fname
         self.iniBB = bbox
         self.tracker_name = tracker_name
         self.onset_labels = None  # see set_events
-        #Threshold for hough transform
-        self.threshold = (0, 0)
-
+        self.blur = parameters['blur']
+        self.threshold = parameters['threshold']
+        self.canny = parameters['canny']
         # settings
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
             "start_frame": start_frame,
             "fps": 60}
-
         # accumulators
         self.pupil_x = []
         self.pupil_y = []
         self.pupil_count = []
         # output
         self.p_fh = None
-
         self.tracker = set_tracker(tracker_name)
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
@@ -157,9 +170,28 @@ class auto_tracker:
         else:
             return Box([0]*4)
 
+    def find_circle(self, frame):
+        #Get the processed image(blurred, thresholded, and cannied)
+        ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
+        #Get the perfect edge image
+        edged = ft.prepossing()
+        #Analyzing ysing the edged image
+        #The parameters need to be changed for detecting glint(or not)
+        ht = HTimp(edged, 150, (200, 28))
+        circle = self.filter(ht.get())
+
+        if circle is not None:
+            return Circle(circle[0][0])
+        else:
+            return Circle([0]*3)
+
+    #Filter out the unhealthy circle
+    def filter(self, circle):
+        print("Implement after start handling glint")
+        return circle
+
     def update_position(self, tframe):
         middle_x, middle_y = tframe.box.mid_xy()
-
         # print(x,y,w,h)
         # TODO: get pupil radius.
         # TODO: if not success is count off? need count for timing
@@ -181,8 +213,13 @@ class auto_tracker:
             tframe = TrackedFrame(vs.read()[1], count)
             if tframe.frame is None:
                 break
+
             box = self.find_box(tframe.frame)
+            circle = self.find_circle(tframe.frame)
             tframe.set_box(box)
+            tframe.set_circle(circle)
+
+
 
             # save positions to textfile and in this object
             self.update_position(tframe)
@@ -283,9 +320,6 @@ class auto_tracker:
         plt.vlines(event_frames, ymin, ymax, color=colors)
         plt.show()
         
-
-
-
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)
     track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)

@@ -2,13 +2,13 @@ from optimization import fast_tracker
 import cv2
 
 class preprocess:
-    def __init__(self, s_center, CPI = None, area = None, image = None):
+    def __init__(self, s_center, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
 
         self.s_center = s_center #Later useful for decrease runtime
 
         self.cropping_factor = CPI
-        self.blur = (16, 16)
-        self.canny = (40, 50)
+        self.blur = blur
+        self.canny = canny
         self.factor = (2,2)#this factor might change based on the resize effect
         #Read in the picture that's guaranteed to be opened eye
         if image is None:

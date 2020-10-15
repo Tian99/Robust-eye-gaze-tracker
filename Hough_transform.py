@@ -66,8 +66,8 @@ class fast_tracker:
 			for x in range(0, width):
 				#If an edge pixel is found
 				if img.item(y, x) >= 255:
-					for r in range(Rmin, Rmax, 2):
-						for t in range(0, 360, 2):
+					for r in range(Rmin, Rmax, 4):
+						for t in range(0, 360, 4):
 							#Cast it to a new cooedinates
 							x0 = int(x-(r*math.cos(math.radians(t))))
 							y0 = int(y-(r*math.sin(math.radians(t))))

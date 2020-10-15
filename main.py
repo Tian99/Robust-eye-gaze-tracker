@@ -33,18 +33,19 @@ class main(QtWidgets.QMainWindow):
         self.size_factor = (4,4)
         self.cropping_factor = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
 
+        #Parameters to store necessary information for hough transform
+        self.parameters = {}
+
         uic.loadUi('Interface/dum.ui', self)
         self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
         self.setWindowTitle('Pupil Tracking')
         self.Analyze.setEnabled(False)
-        self.Demo.setEnabled(False)
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
         self.Terminate.clicked.connect(self.terminate)
         #Only for the initial run
         self.VideoText.setText('input/run1.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
-        self.Demo.clicked.connect(self.video_call)
         self.player = VideoPlayer(self, self.path)
         #Clear the folder to eliminate overlapping
         self.show()
@@ -54,9 +55,9 @@ class main(QtWidgets.QMainWindow):
         print('Implement later')
 
     #The whole purpose of this function is to use multi-threading
-    def tracking(self, ROI):
+    def tracking(self, ROI, parameters):
         #Initialize the eye_tracker
-        track = auto_tracker(self.Video, ROI)
+        track = auto_tracker(self.Video, ROI, parameters)
         track.set_events(self.File)
         track.run_tracker()
 
@@ -88,7 +89,6 @@ class main(QtWidgets.QMainWindow):
             return
 
         self.Analyze.setEnabled(False)
-        self.Demo.setEnabled(True)
         # self.Generate.setEnabled(True)
         print(self.MyWidget.begin)
         print(self.MyWidget.end)
@@ -114,15 +114,27 @@ class main(QtWidgets.QMainWindow):
         self.CPI = self.cropping_factor
         #Calculate the center of the pupil
         self.center = (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
+        self.parameters['blur'] = (16, 16) #Default value for calculating threshold
+        self.parameters['canny'] = (40, 50) #Default value for calculating threshold
+
         #Save file for the input of machine learning class
         # cv2.imwrite('input/search_case.png', new_dimension)
         print("Run Preprocessing")
         #Preprocess automatically reads in the image
-        pp = preprocess(self.center, self.CPI) #The first None is the area, will include later
+        pp = preprocess(self.center, self.CPI, self.parameters['blur'], self.parameters['canny']) #The first None is the area, will include later
+        #Since two parameters are guessed, there might be instances that this might not work....
+        #Need to add another loop for another parameter if that happens.
         th_range = pp.start()
-        print("Threshold range: ", th_range)
-        t2 = threading.Thread(target=self.tracking, args=(ROI,))
+        print(th_range)
+        print('Check this number!!!!!!!!!!!!')
+
+        #Add the perfect threshold value
+        self.parameters['threshold'] = th_range
+        #Parameters is stored as(blur, canny, threshold)
+        t2 = threading.Thread(target=self.tracking, args=(ROI, self.parameters))
+        #Starting the tracking process
         t2.start()
+        #No need to wait till it finishes. That defeats the purpose.
         # t2.join()
 
     #This function also calls another thread which saves all video generated images in the output file
