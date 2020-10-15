@@ -26,7 +26,6 @@ class fast_tracker:
 		thresholded = self.threshold_img(blurred)
 		#Then canny the image for better analysis
 		edged = self.canny_img(thresholded)
-
 		return edged
 
 	"""Alll the method downbelow have variables, totally 6 distinct variables
@@ -66,8 +65,8 @@ class fast_tracker:
 			for x in range(area[2], area[3]):
 				#If an edge pixel is found
 				if img.item(y, x) >= 255:
-					for r in range(Rmin, Rmax, 4):
-						for t in range(0, 360, 4):
+					for r in range(Rmin, Rmax, 6):
+						for t in range(0, 360, 6):
 							#Cast it to a new cooedinates
 							x0 = int(x-(r*math.cos(math.radians(t))))
 							y0 = int(y-(r*math.sin(math.radians(t))))

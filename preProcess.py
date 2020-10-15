@@ -4,20 +4,16 @@ import cv2
 class preprocess:
     def __init__(self, s_center, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
 
-        self.s_center = s_center #Later useful for decrease runtime
-
-        self.cropping_factor = CPI
-        self.blur = blur
-        self.canny = canny
-        self.factor = (2,2)#this factor might change based on the resize effect
-        #Read in the picture that's guaranteed to be opened eye
         if image is None:
             self.sample = cv2.imread("input/chosen_pic.png")
         else:
             self.sample = image
-        #Crop the sample based on CPI
-        # self.cropped =  self.sample[self.cropping_factor[1][0] : self.cropping_factor[1][1],
-        #                        self.cropping_factor[0][0] : self.cropping_factor[0][1]]
+            
+        self.s_center = s_center #Later useful for decrease runtime
+        self.cropping_factor = CPI
+        self.blur = blur
+        self.canny = canny
+        self.factor = (4,4)#this factor might change based on the resize effect
 
         self.width = int(self.sample.shape[1])
         self.height = int(self.sample.shape[0])
@@ -29,19 +25,14 @@ class preprocess:
         self.search_area = (int(self.cropping_factor[1][0]/self.factor[0]), int(self.cropping_factor[1][1]/self.factor[0]), \
                             int(self.cropping_factor[0][0]/self.factor[1]), int(self.cropping_factor[0][1]/self.factor[1]))
 
-
-        #Guessed radius########################################
-        #Radius_h is divided by two because it's a radiussss
         self.radius_h = int(min(self.cropping_factor[0][1] - self.cropping_factor[0][0],\
                      self.cropping_factor[1][1] - self.cropping_factor[1][0])/2) #Minimum of croping displacement is closer to radius
 
         self.radius_l = 10 #Initialize to 10 for now, later change based on the size of glint
-
         #normalize it as well.
         self.radius = (int(self.radius_l/self.factor[0]), int(self.radius_h/self.factor[1]))
-
         #GUessed threshold#####################################
-        self.threshold_range = (50, 250) #to iterate through everything.
+        self.threshold_range = (0, 255) #to iterate through everything.
         #Loop through all the threshold possible to find the best threshold rang
 
     def start(self):
@@ -63,9 +54,6 @@ class preprocess:
                 print("\n")
 
         return (ideal_thresh) 
-
-
-
 
 if __name__ == '__main__':
     CPI = [[50, 280], [31, 80]]

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class HTimp():
-    def __init__(self, image, distance = 150, param = (200, 28), radius = (0, 0)):
+    def __init__(self, image, distance = 150, param = (200, 20), radius = (0, 0)):
 
         self.image = image
         self.distance = distance

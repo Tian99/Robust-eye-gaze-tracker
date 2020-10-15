@@ -52,7 +52,7 @@ class Box:
 
     def draw_box(self, frame):
         """draw box onto a frame"""
-        box_color = (0, 255, 0)
+        box_color = (255,0, 0)
         center_color = (255, 0, 0)
         x, y, w, h = (self.x, self.y, self.w, self.h)
         cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
@@ -71,8 +71,8 @@ class Circle:
         self.x, self.y, self.r = circlecoords
 
     def draw_circle(self, frame):
-        circle_color = (255, 0, 0)
-        center_color = (255, 0, 0)
+        circle_color = (255, 255, 0)
+        center_color = (255, 255, 0)
         cv2.circle(frame, (self.x, self.y), self.r, circle_color, 2)
         cv2.circle(frame, (self.x, self.y), 5, center_color, -1)
 
@@ -175,9 +175,12 @@ class auto_tracker:
         ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
         #Get the perfect edge image
         edged = ft.prepossing()
+        noise_removed = ft.noise_removal(frame)
+        thresholded = ft.threshold_img(noise_removed)
         #Analyzing ysing the edged image
         #The parameters need to be changed for detecting glint(or not)
-        ht = HTimp(edged, 150, (200, 28))
+        ht = HTimp(edged, 150, (255, 20))
+        #Filter out the useful circles.
         circle = self.filter(ht.get())
 
         if circle is not None:
