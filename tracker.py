@@ -42,7 +42,6 @@ class Box:
     def __init__(self, boxcoords):
         boxcoords = (int(x) for x in boxcoords)
         self.x, self.y, self.w, self.h = boxcoords
-
         # center
         self.mid_x = self.x + self.w / 2
         self.mid_y = self.y + self.h / 2
@@ -66,7 +65,6 @@ class Circle:
     """ wrapper for circled pupil location from tracker"""
 
     def __init__(self, circlecoords):
-        print(circlecoords)
         circlecoords = (int(x) for x in circlecoords)
         self.x, self.y, self.r = circlecoords
 
@@ -121,7 +119,7 @@ class auto_tracker:
     """eye tracker"""
 
     def __init__(
-        self, video_fname, bbox, parameters, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
+        self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
         # inputs
         self.video_fname = video_fname
@@ -130,7 +128,10 @@ class auto_tracker:
         self.onset_labels = None  # see set_events
         self.blur = parameters['blur']
         self.threshold = parameters['threshold']
+        self.ROI_glint = ROI_glint
         self.canny = parameters['canny']
+                #For debugging purpose
+        self.t_count = 0
         # settings
         self.settings = {
             "write_img": write_img,
@@ -153,7 +154,7 @@ class auto_tracker:
 
         # file to save pupil location
         if self.settings['write_img']:
-            self.p_fh = open("output/points.csv", "w")
+            self.p_fh = open("data_output/points.csv", "w")
             self.p_fh.write("sample,x,y,r\n")
 
     def set_events(self, csv_fname):
@@ -175,23 +176,38 @@ class auto_tracker:
         ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
         #Get the perfect edge image
         edged = ft.prepossing()
+        cv2.imwrite("testing/%d.png"%self.t_count, edged)
+        self.t_count += 1
         noise_removed = ft.noise_removal(frame)
         thresholded = ft.threshold_img(noise_removed)
         #Analyzing ysing the edged image
         #The parameters need to be changed for detecting glint(or not)
         ht = HTimp(edged, 150, (255, 20))
         #Filter out the useful circles.
-        circle = self.filter(ht.get())
+        circle = self.filter(edged, ht.get())
 
         if circle is not None:
+
             return Circle(circle[0][0])
         else:
             return Circle([0]*3)
 
-    #Filter out the unhealthy circle
-    def filter(self, circle):
-        print("Implement after start handling glint")
-        return circle
+    #Filter out the unhealthy circle and recalculate for useful data
+    def filter(self, edged, circle):
+        k = 19; #One less than the previous defined number 
+        while circle is None and k > 15:
+            ht = HTimp(edged, 150, (255, k))
+            circle = ht.get()
+            k -= 1
+        if circle is None:
+            return None
+        else:
+            radius = circle[0][0][2]
+
+        if (radius <= self.iniBB[2] and radius <= self.iniBB[3]\
+            and radius >= self.ROI_glint[2] and radius >= self.ROI_glint[3])\
+            and self.ROI_glint is not None: #If glint is not None, it is detecting pupil.
+            return circle
 
     def update_position(self, tframe):
         middle_x, middle_y = tframe.box.mid_xy()

@@ -55,9 +55,9 @@ class main(QtWidgets.QMainWindow):
         self.show()
 
     #The whole purpose of this function is to use multi-threading
-    def tracking(self, ROI, parameters):
+    def tracking(self, ROI, parameters, p_glint):
         #Initialize the eye_tracker
-        track = auto_tracker(self.Video, ROI, parameters)
+        track = auto_tracker(self.Video, ROI, parameters, p_glint)
         track.set_events(self.File)
         track.run_tracker()
 
@@ -99,8 +99,8 @@ class main(QtWidgets.QMainWindow):
     def analyze(self):
 
         self.Analyze.setEnabled(False)
-        parameters_pupil = {'blur': (16, 16), 'canny': (40, 50)}
-        parameters_glint = {'blur': (16, 16), 'canny': (40, 50)}
+        parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
+        parameters_glint = {'blur': (20, 20), 'canny': (40, 50)}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -118,10 +118,10 @@ class main(QtWidgets.QMainWindow):
         parameters_pupil['threshold'] = th_range_pupil 
         parameters_glint['threshold'] = th_range_glint
         #Parameters is stored as(blur, canny, threshold)
-        print("ROI_pupil", ROI_pupil)
-        print("ROI_gling", ROI_glint)
+        # print("ROI_pupil", ROI_pupil)
+        # print("ROI_gling", ROI_glint)
 
-        t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil))
+        t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
         t3 = threading.Thread(target=self.tracking, args=(ROI_glint, parameters_glint))
 
         t2.start()
