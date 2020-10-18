@@ -96,11 +96,15 @@ class main(QtWidgets.QMainWindow):
         pp = preprocess(center, CPI, parameters['blur'], parameters['canny'])
         return pp.start()
 
+    def get_blur(self, CPI, parameters, ROI_pupil, ROI_glint):
+        bb = preprocess(None, CPI, parameters['blur'], parameters['canny'])
+        return bb.anal_blur(ROI_pupil, ROI_glint, self.Video)
+
     def analyze(self):
 
         self.Analyze.setEnabled(False)
-        parameters_pupil = {'blur': (10, 10), 'canny': (40, 50)}
-        parameters_glint = {'blur': (10, 10), 'canny': (40, 50)}
+        parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
+        parameters_glint = {'blur': (20, 20), 'canny': (40, 50)}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -110,6 +114,10 @@ class main(QtWidgets.QMainWindow):
         CPI_glint = self.cropping_factor_glint
         center_pupil = self.get_center(ROI_pupil)
         center_glint = self.get_center(ROI_glint)
+
+        #Propress the blurring factor
+        self.get_blur(CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+
         #Preprocess automatically reads in the image
         th_range_pupil = self.get_threshold(center_pupil, CPI_pupil, parameters_pupil)
         th_range_glint = self.get_threshold(center_glint, CPI_glint, parameters_glint)

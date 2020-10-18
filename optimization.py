@@ -95,10 +95,10 @@ class fast_tracker:
 			max_cor.append(max_coordinate)
 			#zero out position
 			accumulator[max_coordinate] = 0
-		print("Maximum coordinates:")
-		print(max_cor)
-		print("Maximum Votes:")
-		print(max_collec)
+		# print("Maximum coordinates:")
+		# print(max_cor)
+		# print("Maximum Votes:")
+		# print(max_collec)
 
 		return (max_cor, max_collec)
 

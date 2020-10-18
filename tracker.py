@@ -134,15 +134,13 @@ class auto_tracker:
         self.threshold = parameters['threshold']
         self.ROI_glint = ROI_glint
         self.canny = parameters['canny']
-                #For debugging purpose
+        self.testcircle = []
         self.t_count = 0
-        # settings
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
             "start_frame": start_frame,
             "fps": 60}
-        # output
         self.p_fh = None
         self.tracker = set_tracker(tracker_name)
         self.previous = (0, 0, 0) #Means for tidying up the data
@@ -222,7 +220,7 @@ class auto_tracker:
         if self.p_fh:
             self.p_fh.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
 
-    def run_tracker(self):
+    def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
         vs = cv2.VideoCapture(self.video_fname)
         vs.set(1, count)
@@ -238,35 +236,43 @@ class auto_tracker:
             circle = self.find_circle(tframe.frame)
             tframe.set_box(box)
             tframe.set_circle(circle)
+            if circle.x != 0 and pretest:
+                self.testcircle.append(circle.x) #Test circle for the convience of blur test
             # save positions to textfile and in this object
-            self.update_position(tframe)
+            if not pretest:
+                self.update_position(tframe)
 
             # Update the fps counter
             fps.update()
             fps.stop()
             fps_measure = fps.fps()
 
-            # only print every 250 frames. printing is slow
-            if count % 250 == 0:
-                print(
-                    "@ step %d, center = (%.02f, %.02f); %.02f fps"
-                    % (count, *tframe.box.mid_xy(), fps_measure)
-                )
+            #End this after 200 cases
+            if count >= 200 and pretest:
+                return
 
-            if self.settings.get("write_img", True):
-                info = {
-                    "Tracker": self.tracker_name,
-                    "Success": "Yes" if tframe.success else "No",
-                    "FPS": "{:.2f}".format(fps_measure),
-                }
-                tframe.draw_tracking(info)
-                self.draw_event(tframe.frame, count)
-                tframe.save_frame()
+            if not pretest:
+                # only print every 250 frames. printing is slow
+                if count % 250 == 0:
+                    print(
+                        "@ step %d, center = (%.02f, %.02f); %.02f fps"
+                        % (count, *tframe.box.mid_xy(), fps_measure)
+                    )
 
-            # option to quit with keyboard q
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
-                exit()
+                if self.settings.get("write_img", True):
+                    info = {
+                        "Tracker": self.tracker_name,
+                        "Success": "Yes" if tframe.success else "No",
+                        "FPS": "{:.2f}".format(fps_measure),
+                    }
+                    tframe.draw_tracking(info)
+                    self.draw_event(tframe.frame, count)
+                    tframe.save_frame()
+
+                # option to quit with keyboard q
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
+                    exit()
 
         print("Ending of the analysis")
         if self.p_fh:

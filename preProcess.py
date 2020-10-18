@@ -1,5 +1,6 @@
-from optimization import fast_tracker
 import cv2
+from tracker import auto_tracker
+from optimization import fast_tracker
 
 class preprocess:
     def __init__(self, s_center, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
@@ -8,7 +9,8 @@ class preprocess:
             self.sample = cv2.imread("input/chosen_pic.png")
         else:
             self.sample = image
-            
+        
+        self.brange = range(10, 20, 1) #Range to find the best blurring
         self.s_center = s_center #Later useful for decrease runtime
         self.cropping_factor = CPI
         self.blur = blur
@@ -50,10 +52,23 @@ class preprocess:
                     most_vote = sum(result[1])
                     ideal_thresh = (i, j) 
                     ideal_center = result[0][0]
-                print(i, j)
-                print("\n")
+                # print(i, j)
+                # print("\n")
 
         return (ideal_thresh) 
+
+    def anal_blur(self, ROI_pupil, ROI_glint, video):
+        b_collect = [] #Collection of first 200 blurs, the size would be different.
+        #Loop through all probabilities
+        for i in self.brange:
+            #First get the threshold, CPI and center should be kept same as the calling function
+            self.parameters = {"blur":(i, i), "canny":self.canny}
+            self.parameters['threshold'] = self.start() #Get the threshold range
+            track = auto_tracker(video, ROI_pupil, self.parameters, ROI_glint)
+            track.run_tracker(True)
+            print("Anal_blur")
+            print(track.testcircle)
+
 
 if __name__ == '__main__':
     CPI = [[50, 280], [31, 80]]
