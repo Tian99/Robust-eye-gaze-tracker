@@ -99,8 +99,8 @@ class main(QtWidgets.QMainWindow):
     def analyze(self):
 
         self.Analyze.setEnabled(False)
-        parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
-        parameters_glint = {'blur': (20, 20), 'canny': (40, 50)}
+        parameters_pupil = {'blur': (10, 10), 'canny': (40, 50)}
+        parameters_glint = {'blur': (10, 10), 'canny': (40, 50)}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)

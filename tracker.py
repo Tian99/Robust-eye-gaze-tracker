@@ -1,5 +1,6 @@
 from imutils.video import VideoStream
 from imutils.video import FPS
+from collections import defaultdict
 import argparse
 import imutils
 import time
@@ -67,6 +68,9 @@ class Circle:
     def __init__(self, circlecoords):
         circlecoords = (int(x) for x in circlecoords)
         self.x, self.y, self.r = circlecoords
+
+    def mid_xyr(self):
+        return (self.x, self.y, self.r)
 
     def draw_circle(self, frame):
         circle_color = (255, 255, 0)
@@ -138,13 +142,10 @@ class auto_tracker:
             "max_frames": max_frames,
             "start_frame": start_frame,
             "fps": 60}
-        # accumulators
-        self.pupil_x = []
-        self.pupil_y = []
-        self.pupil_count = []
         # output
         self.p_fh = None
         self.tracker = set_tracker(tracker_name)
+        self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
         first = cv2.imread("input/chosen_pic.png")
@@ -154,7 +155,7 @@ class auto_tracker:
 
         # file to save pupil location
         if self.settings['write_img']:
-            self.p_fh = open("data_output/points.csv", "w")
+            self.p_fh = open("data_output/pupil.csv", "w")
             self.p_fh.write("sample,x,y,r\n")
 
     def set_events(self, csv_fname):
@@ -210,16 +211,16 @@ class auto_tracker:
             return circle
 
     def update_position(self, tframe):
-        middle_x, middle_y = tframe.box.mid_xy()
+        x, y, r = tframe.circle.mid_xyr()
+        if x != 0 and y != 0 and r != 0:
+            self.previous = (x,y,r) #The 0 index equals the previous one
+        else:
+            x, y, r = self.previous
         # print(x,y,w,h)
         # TODO: get pupil radius.
         # TODO: if not success is count off? need count for timing
         if self.p_fh:
-            self.p_fh.write("%d,%d,%d,NA\n" % (tframe.count, middle_x, middle_y))
-
-        self.pupil_x.append(middle_x)
-        self.pupil_y.append(middle_y)
-        self.pupil_count.append(tframe.count)
+            self.p_fh.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
 
     def run_tracker(self):
         count = self.settings['start_frame']
@@ -237,9 +238,6 @@ class auto_tracker:
             circle = self.find_circle(tframe.frame)
             tframe.set_box(box)
             tframe.set_circle(circle)
-
-
-
             # save positions to textfile and in this object
             self.update_position(tframe)
 
