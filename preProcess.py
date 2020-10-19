@@ -1,6 +1,7 @@
 import cv2
 from tracker import auto_tracker
 from optimization import fast_tracker
+import statistics 
 
 class preprocess:
     def __init__(self, s_center, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
@@ -60,14 +61,24 @@ class preprocess:
     def anal_blur(self, ROI_pupil, ROI_glint, video):
         b_collect = [] #Collection of first 200 blurs, the size would be different.
         #Loop through all probabilities
+        g_blur = (0,0) #The return variable
+        g_std = float("inf")
         for i in self.brange:
             #First get the threshold, CPI and center should be kept same as the calling function
             self.parameters = {"blur":(i, i), "canny":self.canny}
             self.parameters['threshold'] = self.start() #Get the threshold range
             track = auto_tracker(video, ROI_pupil, self.parameters, ROI_glint)
             track.run_tracker(True)
+
             print("Anal_blur")
-            print(track.testcircle)
+            #Get the best blur using standard deviation
+            std = statistics.stdev(track.testcircle)
+            if std == min(g_std, std):
+                g_std = std
+                g_blur = (i,i)
+
+        return g_blur
+
 
 
 if __name__ == '__main__':

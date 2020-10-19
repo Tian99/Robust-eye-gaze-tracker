@@ -116,7 +116,9 @@ class main(QtWidgets.QMainWindow):
         center_glint = self.get_center(ROI_glint)
 
         #Propress the blurring factor
-        self.get_blur(CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+        g_blur = self.get_blur(CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+        #Change the blur to good blur
+        parameters_pupil['blur'] = g_blur
 
         #Preprocess automatically reads in the image
         th_range_pupil = self.get_threshold(center_pupil, CPI_pupil, parameters_pupil)
