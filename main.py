@@ -13,6 +13,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 from Interface.video_player import VideoPlayer
+from plotting import auto_draw
 from preProcess import preprocess
 
 class main(QtWidgets.QMainWindow):
@@ -42,14 +43,16 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.clicked.connect(self.analyze)
         self.Pupil_click.setEnabled(False)
         self.Glint_click.setEnabled(False)
+        self.Plotting.setEnabled(False)
         self.Pupil_chose.toggled.connect(self.circle_pupil)
         self.Glint_chose.toggled.connect(self.circle_glint)
         self.Pupil_chose.setEnabled(False)
         self.Glint_chose.setEnabled(False)
         self.Pupil_click.clicked.connect(self.store_pupil)
         self.Glint_click.clicked.connect(self.store_glint)
+        self.Plotting.clicked.connect(self.plot_result)
         #Only for the initial run
-        self.VideoText.setText('input/run1.mov')
+        self.VideoText.setText('input/run3.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
         self.show()
@@ -103,6 +106,7 @@ class main(QtWidgets.QMainWindow):
     def analyze(self):
 
         self.Analyze.setEnabled(False)
+        self.Plotting.setEnabled(True)
         parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
         parameters_glint = {'blur': (20, 20), 'canny': (40, 50)}
 
@@ -225,6 +229,13 @@ class main(QtWidgets.QMainWindow):
         self.g_y.setText('y: '+ str(self.MyWidget.begin.y()))
         self.g_yl.setText('yl: '+ str(self.MyWidget.end.y()))
 
+
+    def plot_result(self):
+        ad = auto_draw()
+        ad.read('data_output/pupil.csv')
+        ad.draw_x()
+        ad.draw_y()
+        ad.draw_r()
 
     #This function is only for choosing the best open-eye picture
     #Maybe its a bit redundant, try to fix later
