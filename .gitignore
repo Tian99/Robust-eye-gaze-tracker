@@ -1,5 +1,6 @@
 *.avi
 *.png
+*.csv
 input/
 output/
 *.pyc

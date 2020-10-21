@@ -11,7 +11,7 @@ class preprocess:
         else:
             self.sample = image
         
-        self.brange = range(10, 20, 1) #Range to find the best blurring
+        self.brange = range(10, 22, 1) #Range to find the best blurring
         self.s_center = s_center #Later useful for decrease runtime
         self.cropping_factor = CPI
         self.blur = blur
@@ -69,17 +69,21 @@ class preprocess:
             self.parameters['threshold'] = self.start() #Get the threshold range
             track = auto_tracker(video, ROI_pupil, self.parameters, ROI_glint)
             track.run_tracker(True)
-
             print("Anal_blur")
             #Get the best blur using standard deviation
             std = statistics.stdev(track.testcircle)
+            # print(std)
+            # print(i, i)
+            print(i, i)
+            print(std)
             if std == min(g_std, std):
+                # #Get rid of exceptions
+                # if track.testcircle.count(0)/len(track.testcircle) > 0.1:
+                #     continue
                 g_std = std
                 g_blur = (i,i)
 
         return g_blur
-
-
 
 if __name__ == '__main__':
     CPI = [[50, 280], [31, 80]]

@@ -170,7 +170,7 @@ class auto_tracker:
         else:
             return Box([0]*4)
 
-    def find_circle(self, frame):
+    def find_circle(self, frame, pretest):
         #Get the processed image(blurred, thresholded, and cannied)
         ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
         #Get the perfect edge image
@@ -182,8 +182,10 @@ class auto_tracker:
         #Analyzing ysing the edged image
         #The parameters need to be changed for detecting glint(or not)
         ht = HTimp(edged, 150, (255, 20))
+        circle = ht.get()
         #Filter out the useful circles.
-        circle = self.filter(edged, ht.get())
+        if not pretest: #Need true data when doing pretest
+            circle = self.filter(edged, ht.get())
 
         if circle is not None:
 
@@ -194,19 +196,22 @@ class auto_tracker:
     #Filter out the unhealthy circle and recalculate for useful data
     def filter(self, edged, circle):
         k = 19; #One less than the previous defined number 
-        while circle is None and k > 15:
+        diameter = circle[0][0][2]*2 if circle is not None else None
+        while (diameter is None or \
+              diameter >= min(self.iniBB[2], self.iniBB[3])or\
+              diameter <= min(self.ROI_glint[2], self.ROI_glint[3])) and\
+              k > 15:
             ht = HTimp(edged, 150, (255, k))
             circle = ht.get()
+            diameter = circle[0][0][2]*2 if circle is not None else None
             k -= 1
-        if circle is None:
-            return None
-        else:
-            radius = circle[0][0][2]
 
-        if (radius <= self.iniBB[2] and radius <= self.iniBB[3]\
-            and radius >= self.ROI_glint[2] and radius >= self.ROI_glint[3])\
-            and self.ROI_glint is not None: #If glint is not None, it is detecting pupil.
-            return circle
+        if diameter is None or\
+           diameter >= min(self.iniBB[2], self.iniBB[3]) or\
+           diameter <= min(self.ROI_glint[2], self.ROI_glint[3]):
+           return None
+
+        return circle
 
     def update_position(self, tframe):
         x, y, r = tframe.circle.mid_xyr()
@@ -233,13 +238,13 @@ class auto_tracker:
                 break
 
             box = self.find_box(tframe.frame)
-            circle = self.find_circle(tframe.frame)
+            circle = self.find_circle(tframe.frame, pretest)
             tframe.set_box(box)
             tframe.set_circle(circle)
-            if circle.x != 0 and pretest:
+            if pretest:
                 self.testcircle.append(circle.x) #Test circle for the convience of blur test
             # save positions to textfile and in this object
-            if not pretest:
+            else:
                 self.update_position(tframe)
 
             # Update the fps counter
@@ -248,7 +253,7 @@ class auto_tracker:
             fps_measure = fps.fps()
 
             #End this after 200 cases
-            if count >= 200 and pretest:
+            if count >= 250 and pretest:
                 return
 
             if not pretest:
