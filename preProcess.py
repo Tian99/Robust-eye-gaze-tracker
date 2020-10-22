@@ -45,7 +45,7 @@ class preprocess:
         for i in range(self.threshold_range[0], self.threshold_range[1], 5):
             for j in range(i, self.threshold_range[1]-50, 10):
                 setup = fast_tracker(self.cropped, (i, j), self.blur, self.canny, self.radius) #Might be slow
-                processed = setup.prepossing() #Processed image using the guessed parameters
+                processed = setup.prepossing()[0] #Processed image using the guessed parameters
                 #Run the Hough Transfom, a voting algorithm that will analysis the legidity of processed image.
                 #Result is [coordinate] and [max voting]
                 result = setup.hough_transform(processed, self.search_area)

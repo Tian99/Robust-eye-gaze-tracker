@@ -26,7 +26,7 @@ class fast_tracker:
 		thresholded = self.threshold_img(blurred)
 		#Then canny the image for better analysis
 		edged = self.canny_img(thresholded)
-		return edged
+		return (edged, thresholded)
 
 	"""Alll the method downbelow have variables, totally 6 distinct variables
 	That need to be change either by machine learning or by user or both.
@@ -109,6 +109,6 @@ class fast_tracker:
 if __name__ == '__main__':
 	img = cv2.imread('../input/search_case.png')
 	APP = fast_tracker(img)
-	output = APP.prepossing()
+	output = APP.prepossing()[0]
 	APP.hough_transform(output, area)
 	cv2.imwrite('image.png', output)

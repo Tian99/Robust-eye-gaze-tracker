@@ -3,6 +3,7 @@
 *.csv
 input/
 output/
+data_output/
 *.pyc
 .ipynb_checkpoints
 .DS_Store

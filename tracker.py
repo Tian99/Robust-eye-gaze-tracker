@@ -1,13 +1,13 @@
 from imutils.video import VideoStream
 from imutils.video import FPS
 from collections import defaultdict
+from extraction import extraction
+from optimization import fast_tracker
+from HTimp import HTimp
 import argparse
 import imutils
 import time
 import cv2
-from extraction import extraction
-from optimization import fast_tracker
-from HTimp import HTimp
 
 OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
@@ -100,7 +100,6 @@ class TrackedFrame:
         @param text_info dict of information to put on image
         @side-effect. cv2 modifies frame as it draws"""
         text_color = (0, 0, 255)
-
         self.box.draw_box(self.frame)
         self.circle.draw_circle(self.frame)
 
@@ -170,12 +169,18 @@ class auto_tracker:
         else:
             return Box([0]*4)
 
+    def render(self, ft):
+        #Get the perfect edge image
+        result = ft.prepossing()[0]
+        edged = result[0]
+        threshold = result[1]
+        cv2.imwrite("testing/%d.png"%self.t_count, edged)
+        return (edged, threshold)
+        
     def find_circle(self, frame, pretest):
         #Get the processed image(blurred, thresholded, and cannied)
         ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
-        #Get the perfect edge image
-        edged = ft.prepossing()
-        cv2.imwrite("testing/%d.png"%self.t_count, edged)
+        edged = self.render(ft)[0]
         self.t_count += 1
         noise_removed = ft.noise_removal(frame)
         thresholded = ft.threshold_img(noise_removed)
@@ -188,7 +193,6 @@ class auto_tracker:
             circle = self.filter(edged, ht.get())
 
         if circle is not None:
-
             return Circle(circle[0][0])
         else:
             return Circle([0]*3)
