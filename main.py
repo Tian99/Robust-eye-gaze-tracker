@@ -52,7 +52,7 @@ class main(QtWidgets.QMainWindow):
         self.Glint_click.clicked.connect(self.store_glint)
         self.Plotting.clicked.connect(self.plot_result)
         #Only for the initial run
-        self.VideoText.setText('input/run3.mov')
+        self.VideoText.setText('input/run1.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
         self.show()
@@ -236,10 +236,11 @@ class main(QtWidgets.QMainWindow):
         ad.draw_x()
         ad.draw_y()
         ad.draw_r()
+        ad.draw_blink()
 
     #This function is only for choosing the best open-eye picture
     #Maybe its a bit redundant, try to fix later
-    def to_frame(self, video, limit = 500):
+    def to_frame(self, video, limit = 300):
         maximum = 0
         wanted = 0
         #i counts the image sequence generated from the video file

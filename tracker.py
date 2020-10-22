@@ -43,7 +43,6 @@ class Box:
     def __init__(self, boxcoords):
         boxcoords = (int(x) for x in boxcoords)
         self.x, self.y, self.w, self.h = boxcoords
-        # center
         self.mid_x = self.x + self.w / 2
         self.mid_y = self.y + self.h / 2
 
@@ -85,14 +84,16 @@ class TrackedFrame:
         self.frame = frame    # for saving image
         self.count = count    # image filename
         self.box = None       # save image overlay: box
-        self.success = False  # save image overlay: text
+        self.success_box = False  # save image overlay: text
+        self.success_circle = False
 
     def set_box(self, box):
         self.box = box
-        self.success = self.box.w != 0
+        self.success_box = self.box.w != 0
 
     def set_circle(self, circle):
         self.circle = circle
+        self.success_circle = self.circle.r != 0
 
     def draw_tracking(self, text_info):
         """add bouding box and pupil center to image
@@ -125,68 +126,79 @@ class auto_tracker:
         self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
         # inputs
-        self.video_fname = video_fname
-        self.iniBB = bbox
-        self.tracker_name = tracker_name
+        self.t_count = 0 #Count for Hough transform
+        self.num_circle = 20
+        self.first = None #The first image to initialize KCF tracker
+        self.p_fh = None
         self.onset_labels = None  # see set_events
-        self.blur = parameters['blur']
-        self.threshold = parameters['threshold']
-        self.ROI_glint = ROI_glint
-        self.canny = parameters['canny']
+        self.m_range = 20 #Blink detection
+        self.m_critical = 3 #Blink detection
+        self.num_blink = 0
         self.testcircle = []
-        self.t_count = 0
+        self.iniBB = bbox
+        self.video_fname = video_fname
+        self.tracker_name = tracker_name
+        self.ROI_glint = ROI_glint
+        self.blur = parameters['blur']
+        self.canny = parameters['canny']
+        self.threshold = parameters['threshold']
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
             "start_frame": start_frame,
             "fps": 60}
-        self.p_fh = None
         self.tracker = set_tracker(tracker_name)
+        print(f"initializign tracking @ {start_frame} frame")
+        self.get_input() #Reads in the perfect image and set tracker
         self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
-        first = cv2.imread("input/chosen_pic.png")
-        print(f"initializign tracking @ {start_frame} frame")
-        self.tracker.init(first, self.iniBB)
-        (success, box) = self.tracker.update(first)
-
         # file to save pupil location
         if self.settings['write_img']:
             self.p_fh = open("data_output/pupil.csv", "w")
-            self.p_fh.write("sample,x,y,r\n")
+            self.p_fh.write("sample,x,y,r,blink\n")
+
+    def get_input(self):
+        self.first = cv2.imread("input/chosen_pic.png")
+        #Render the first image to run KCF on Threshold
+        self.first = self.render(self.first)[1]
+        cv2.imwrite("testing.png",self.first)
+        self.tracker.init(self.first, self.iniBB)
+        (success_box, box) = self.tracker.update(self.first)
 
     def set_events(self, csv_fname):
         """set task event info from csv_filename"""
         self.onset_labels = extraction(csv_fname)
         self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
-    def find_box(self, frame):
-        self.tracker.init(frame, self.iniBB)
-        (success, box) = self.tracker.update(frame)
+    def render(self, frame):
+        #Get the perfect edge image
+        ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
+        result = ft.prepossing()
+        edged = result[0]
+        threshold = result[1]
+        return (edged, threshold)
+        #This is for testing
+        # cv2.imwrite("testing/%d.png"%self.t_count, edged)
 
-        if success:
+    def find_box(self, frame):
+        #Find box using threshold
+        frame = self.render(frame)[1]
+        self.tracker.init(frame, self.iniBB)
+        (success_box, box) = self.tracker.update(frame)
+
+        if success_box :
             return Box(box)
         else:
             return Box([0]*4)
-
-    def render(self, ft):
-        #Get the perfect edge image
-        result = ft.prepossing()[0]
-        edged = result[0]
-        threshold = result[1]
-        cv2.imwrite("testing/%d.png"%self.t_count, edged)
-        return (edged, threshold)
         
     def find_circle(self, frame, pretest):
         #Get the processed image(blurred, thresholded, and cannied)
-        ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
-        edged = self.render(ft)[0]
+        edged = self.render(frame)[0]
         self.t_count += 1
-        noise_removed = ft.noise_removal(frame)
-        thresholded = ft.threshold_img(noise_removed)
-        #Analyzing ysing the edged image
+        #Analyzing using the edged image
         #The parameters need to be changed for detecting glint(or not)
-        ht = HTimp(edged, 150, (255, 20))
+        ht = HTimp(edged, 150, (255, self.num_circle))
         circle = ht.get()
         #Filter out the useful circles.
         if not pretest: #Need true data when doing pretest
@@ -199,12 +211,12 @@ class auto_tracker:
 
     #Filter out the unhealthy circle and recalculate for useful data
     def filter(self, edged, circle):
-        k = 19; #One less than the previous defined number 
+        k = self.num_circle - 1; #One less than the previous defined number 
         diameter = circle[0][0][2]*2 if circle is not None else None
         while (diameter is None or \
               diameter >= min(self.iniBB[2], self.iniBB[3])or\
               diameter <= min(self.ROI_glint[2], self.ROI_glint[3])) and\
-              k > 15:
+              k > self.num_circle - 6:
             ht = HTimp(edged, 150, (255, k))
             circle = ht.get()
             diameter = circle[0][0][2]*2 if circle is not None else None
@@ -218,7 +230,17 @@ class auto_tracker:
         return circle
 
     def update_position(self, tframe):
+        x_b, y_b = tframe.box.mid_xy()
         x, y, r = tframe.circle.mid_xyr()
+
+        if not tframe.success_box and not tframe.success_circle:
+            self.m_range -= 1
+            self.m_critical -= 1
+        if self.m_critical <= 0 and not self.m_range <= 0:
+            self.m_range = 20
+            self.m_critical = 3
+            self.num_blink += 1
+
         if x != 0 and y != 0 and r != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
         else:
@@ -227,7 +249,7 @@ class auto_tracker:
         # TODO: get pupil radius.
         # TODO: if not success is count off? need count for timing
         if self.p_fh:
-            self.p_fh.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
+            self.p_fh.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
 
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
@@ -236,8 +258,8 @@ class auto_tracker:
         while True and count < self.settings["max_frames"]:
             count += 1
             fps = FPS().start()
-
-            tframe = TrackedFrame(vs.read()[1], count)
+            rframe = vs.read()[1]
+            tframe = TrackedFrame(rframe, count)
             if tframe.frame is None:
                 break
 
@@ -247,16 +269,15 @@ class auto_tracker:
             tframe.set_circle(circle)
             if pretest:
                 self.testcircle.append(circle.x) #Test circle for the convience of blur test
-            # save positions to textfile and in this object
             else:
+                #No need to update file if it's just a text
                 self.update_position(tframe)
-
             # Update the fps counter
             fps.update()
             fps.stop()
             fps_measure = fps.fps()
 
-            #End this after 200 cases
+            #End pretest after 200 cases
             if count >= 250 and pretest:
                 return
 
@@ -271,7 +292,7 @@ class auto_tracker:
                 if self.settings.get("write_img", True):
                     info = {
                         "Tracker": self.tracker_name,
-                        "Success": "Yes" if tframe.success else "No",
+                        "Success": "Yes" if tframe.success_box else "No",
                         "FPS": "{:.2f}".format(fps_measure),
                     }
                     tframe.draw_tracking(info)
