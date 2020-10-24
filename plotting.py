@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import scipy.stats as stats
 import numpy as np
 import csv
 
@@ -24,39 +25,54 @@ class auto_draw:
 	def draw_x(self, J = False):
 		plt.ylabel('X')
 		plt.xlabel('Label')
-		plt.plot(self.as_dict['sample'], self.as_dict['x'])
+		z_score = stats.zscore(self.as_dict['x'])
+		plt.plot(self.as_dict['sample'], z_score, 'b-', label = 'zscore')
+		plt.plot(self.as_dict['sample'], self.as_dict['x'], 'r-', label = 'x')
 		if J:
 			plt.show()
 			return
+		plt.legend()
+		plt.grid()
 		plt.savefig('plotting/x_pupil.png')
 		plt.close()
 
 	def draw_y(self, J = False):
 		plt.ylabel('Y')
 		plt.xlabel('Label')
-		plt.plot(self.as_dict['sample'], self.as_dict['y'])
+		z_score = stats.zscore(self.as_dict['y'])
+		plt.plot(self.as_dict['sample'], z_score, 'b-', label = 'zscore')
+		plt.plot(self.as_dict['sample'], self.as_dict['y'], 'r-', label = 'y')
 		if J:
 			plt.show()
 			return 
+		plt.legend()
+		plt.grid()
 		plt.savefig('plotting/y_pupil.png')
 		plt.close()
 
 	def draw_r(self, J = False):
 		plt.ylabel('R')
 		plt.xlabel('Label')
-		plt.plot(self.as_dict['sample'], self.as_dict['r'])
+		z_score = stats.zscore(self.as_dict['r'])
+		plt.plot(self.as_dict['sample'], z_score, 'b-', label = 'zscore')
+		plt.plot(self.as_dict['sample'], self.as_dict['r'], 'r-', label = 'r')
 		if J:
 			plt.show()
 			return
+		plt.legend()
+		plt.grid()
 		plt.savefig('plotting/r_pupil.png')
 		plt.close()
 
 	def draw_blink(self, J = False):
 		plt.ylabel('blink')
 		plt.xlabel('Label')
-		plt.plot(self.as_dict['sample'], self.as_dict['blink'])
+		plt.plot(self.as_dict['sample'], self.as_dict['blink'], label = 'blink')
 		if J:
 			plt.show()
 			return
+		plt.legend()
+		plt.grid()
 		plt.savefig('plotting/blink_pupil.png')
 		plt.close()
+
