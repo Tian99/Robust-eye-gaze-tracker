@@ -4,7 +4,7 @@ from optimization import fast_tracker
 import statistics 
 
 class preprocess:
-    def __init__(self, s_center, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
+    def __init__(self, s_center, sf, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
 
         if image is None:
             self.sample = cv2.imread("input/chosen_pic.png")
@@ -16,7 +16,7 @@ class preprocess:
         self.cropping_factor = CPI
         self.blur = blur
         self.canny = canny
-        self.factor = (4,4)#this factor might change based on the resize effect
+        self.factor = (sf,sf)#this factor might change based on the resize effect
 
         self.width = int(self.sample.shape[1])
         self.height = int(self.sample.shape[0])
@@ -54,6 +54,7 @@ class preprocess:
                     ideal_thresh = (i, j) 
                     ideal_center = result[0][0]
                 # print(i, j)
+                # print(result[1])
                 # print("\n")
 
         return (ideal_thresh) 

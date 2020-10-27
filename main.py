@@ -95,12 +95,12 @@ class main(QtWidgets.QMainWindow):
     def get_center(self, ROI):
         return (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
 
-    def get_threshold(self, center, CPI, parameters):
-        pp = preprocess(center, CPI, parameters['blur'], parameters['canny'])
+    def get_threshold(self, center, sf, CPI, parameters):
+        pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
         return pp.start()
 
-    def get_blur(self, CPI, parameters, ROI_pupil, ROI_glint):
-        bb = preprocess(None, CPI, parameters['blur'], parameters['canny'])
+    def get_blur(self, sf, CPI, parameters, ROI_pupil, ROI_glint):
+        bb = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
         return bb.anal_blur(ROI_pupil, ROI_glint, self.Video)
 
     def analyze(self):
@@ -120,17 +120,18 @@ class main(QtWidgets.QMainWindow):
         center_glint = self.get_center(ROI_glint)
 
         #Propress the blurring factor
-        g_blur = self.get_blur(CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+        g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
         #Change the blur to good blur
         parameters_pupil['blur'] = g_blur
 
         #Preprocess automatically reads in the image
-        th_range_pupil = self.get_threshold(center_pupil, CPI_pupil, parameters_pupil)
-        th_range_glint = self.get_threshold(center_glint, CPI_glint, parameters_glint)
-
+        th_range_pupil = self.get_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
+        th_range_glint = self.get_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
+        
         #Add the perfect threshold value
         parameters_pupil['threshold'] = th_range_pupil 
         parameters_glint['threshold'] = th_range_glint
+
         #Parameters is stored as(blur, canny, threshold)
         # print("ROI_pupil", ROI_pupil)
         # print("ROI_gling", ROI_glint)
