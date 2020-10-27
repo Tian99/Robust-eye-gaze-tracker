@@ -1,9 +1,9 @@
 *.avi
 *.png
 *.csv
+data_output/
 input/
 output/
-data_output/
 *.pyc
 .ipynb_checkpoints
 .DS_Store
