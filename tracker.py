@@ -162,7 +162,6 @@ class auto_tracker:
         self.first = cv2.imread("input/chosen_pic.png")
         #Render the first image to run KCF on Threshold
         self.first = self.render(self.first)[1]
-        cv2.imwrite("testing.png",self.first)
         self.tracker.init(self.first, self.iniBB)
         (success_box, box) = self.tracker.update(self.first)
 

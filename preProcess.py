@@ -37,6 +37,7 @@ class preprocess:
         #GUessed threshold#####################################
         self.threshold_range = (0, 255) #to iterate through everything.
         #Loop through all the threshold possible to find the best threshold rang
+        self.glint_range = (150, 255)
 
     def start(self):
         most_vote = 0;
@@ -58,6 +59,15 @@ class preprocess:
                 # print("\n")
 
         return (ideal_thresh) 
+
+    def d_glint(self):
+        sample_glint = self.sample[self.search_area[0]:self.search_area[1], self.search_area[2]:self.search_area[3]]
+        sample_glint = cv2.cvtColor(sample_glint, cv2.COLOR_BGR2GRAY)
+        # for i in range(self.glint_range[0], self.glint_range[1]): #Able to make a wild guess for threshold detection
+        #     for j in range(i, self.glint_range[1], 10):
+        _, proc = cv2.threshold(sample_glint,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
+        # cv2.imwrite("look.png", proc)
 
     def anal_blur(self, ROI_pupil, ROI_glint, video):
         b_collect = [] #Collection of first 200 blurs, the size would be different.

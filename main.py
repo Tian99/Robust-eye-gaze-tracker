@@ -52,7 +52,7 @@ class main(QtWidgets.QMainWindow):
         self.Glint_click.clicked.connect(self.store_glint)
         self.Plotting.clicked.connect(self.plot_result)
         #Only for the initial run
-        self.VideoText.setText('input/run1.mov')
+        self.VideoText.setText('input/run3.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
         self.show()
@@ -95,9 +95,13 @@ class main(QtWidgets.QMainWindow):
     def get_center(self, ROI):
         return (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
 
-    def get_threshold(self, center, sf, CPI, parameters):
+    def pupil_threshold(self, center, sf, CPI, parameters):
         pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
         return pp.start()
+
+    def glint_threshold(self, center, sf, CPI, parameters):
+        pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
+        return pp.d_glint()
 
     def get_blur(self, sf, CPI, parameters, ROI_pupil, ROI_glint):
         bb = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
@@ -108,7 +112,7 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.setEnabled(False)
         self.Plotting.setEnabled(True)
         parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
-        parameters_glint = {'blur': (20, 20), 'canny': (40, 50)}
+        parameters_glint = {'blur': (10, 10), 'canny': (40, 50)}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -125,8 +129,9 @@ class main(QtWidgets.QMainWindow):
         parameters_pupil['blur'] = g_blur
 
         #Preprocess automatically reads in the image
-        th_range_pupil = self.get_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
-        th_range_glint = self.get_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
+        th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
+        #This function is mostly precaution, which does nothing....
+        th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
         
         #Add the perfect threshold value
         parameters_pupil['threshold'] = th_range_pupil 
