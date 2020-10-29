@@ -63,11 +63,13 @@ class preprocess:
     def d_glint(self):
         sample_glint = self.sample[self.search_area[0]:self.search_area[1], self.search_area[2]:self.search_area[3]]
         sample_glint = cv2.cvtColor(sample_glint, cv2.COLOR_BGR2GRAY)
+        sample_glint = cv2.blur(sample_glint,(self.blur[0], self.blur[1]))
         # for i in range(self.glint_range[0], self.glint_range[1]): #Able to make a wild guess for threshold detection
         #     for j in range(i, self.glint_range[1], 10):
-        _, proc = cv2.threshold(sample_glint,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
+        thre,proc = cv2.threshold(sample_glint,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
         # cv2.imwrite("look.png", proc)
+        # exit()
+        return (thre, thre)
 
     def anal_blur(self, ROI_pupil, ROI_glint, video):
         b_collect = [] #Collection of first 200 blurs, the size would be different.
@@ -83,8 +85,6 @@ class preprocess:
             print("Anal_blur")
             #Get the best blur using standard deviation
             std = statistics.stdev(track.testcircle)
-            # print(std)
-            # print(i, i)
             print(i, i)
             print(std)
             if std == min(g_std, std):

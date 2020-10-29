@@ -8,6 +8,7 @@ import threading
 import os, shutil
 import numpy as np
 from tracker import auto_tracker
+from gtracker import g_auto_tracker
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
@@ -64,6 +65,11 @@ class main(QtWidgets.QMainWindow):
         track.set_events(self.File)
         track.run_tracker()
 
+    def gtracking(self, ROI, CPI, parameters_glint):
+        track = g_auto_tracker(self.Video, ROI, CPI, parameters_glint)
+        track.set_events(self.File)
+        track.run_tracker()
+
     def video_call(self):
         #Construct all thr available files to video to be displayed
         video_construct()
@@ -112,7 +118,7 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.setEnabled(False)
         self.Plotting.setEnabled(True)
         parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
-        parameters_glint = {'blur': (10, 10), 'canny': (40, 50)}
+        parameters_glint = {'blur': (2, 2), 'canny': (40, 50)}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -142,9 +148,10 @@ class main(QtWidgets.QMainWindow):
         # print("ROI_gling", ROI_glint)
 
         t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
-        t3 = threading.Thread(target=self.tracking, args=(ROI_glint, parameters_glint))
+        t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
 
         t2.start()
+        t3.start()
 
     #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
