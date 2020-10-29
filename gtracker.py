@@ -152,6 +152,7 @@ class g_auto_tracker:
 
     def find_box(self, frame):
         #Find box using threshold
+        #Recalculate threshold every time
         frame = self.render(frame)
         #For debuging use
         cv2.imwrite("glint_testing/%d.png"%self.count, frame)
