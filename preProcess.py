@@ -36,8 +36,6 @@ class preprocess:
         self.radius = (int(self.radius_l/self.factor[0]), int(self.radius_h/self.factor[1]))
         #GUessed threshold#####################################
         self.threshold_range = (0, 255) #to iterate through everything.
-        #Loop through all the threshold possible to find the best threshold rang
-        self.glint_range = (150, 255)
 
     def start(self):
         most_vote = 0;

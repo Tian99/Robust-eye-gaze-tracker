@@ -2,6 +2,7 @@ from imutils.video import VideoStream
 from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
+from preProcess import preprocess
 import argparse
 import imutils
 import time
@@ -138,6 +139,8 @@ class g_auto_tracker:
         (success_box, box) = self.tracker.update(self.first)
 
     def render(self, frame):
+        pp = preprocess(None, 1, self.CPI_glint, self.blur, None)
+        self.threshold = pp.d_glint()
         ft = fast_tracker(frame, self.threshold, self.blur)
         blur_img = ft.noise_removal(frame)
         thre_img = ft.threshold_img(blur_img)
