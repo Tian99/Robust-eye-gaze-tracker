@@ -3,6 +3,7 @@ from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
 from preProcess import preprocess
+from glint_find import glint_find
 import argparse
 import imutils
 import time
@@ -51,13 +52,27 @@ class Box:
     def draw_box(self, frame):
         """draw box onto a frame"""
         box_color = (255,0, 0)
-        center_color = (255, 0, 0)
         x, y, w, h = (self.x, self.y, self.w, self.h)
         cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
         # The dot in the center that marks the center of the pupil
 
     def __repr__(self):
         return f'({self.x},{self.y}) {self.w}x{self.h}' 
+
+class Circle:
+
+    def __init__(self, center):
+        self.mid_x_c = center[0]
+        self.mid_y_c = center[1]
+
+    def mid_xy(self):
+        return (self.mid_x, self.mid_y)
+
+    def draw_circle(self, frame):
+        """draw box onto a frame"""
+        circle_color = (0,255, 0)
+        r = 4 #Maybe it's 4?
+        cv2.circle(frame, (self.mid_x_c, self.mid_y_c), r, circle_color, 2)
 
 class TrackedFrame:
     """a frame and it's tracking info"""
@@ -72,6 +87,9 @@ class TrackedFrame:
         self.box = box
         self.success_box = self.box.w != 0
 
+    def set_circle(self, circle):
+        self.circle = circle
+
     def draw_tracking(self, text_info):
         """add bouding box and pupil center to image
         add text from text_info dict
@@ -79,7 +97,7 @@ class TrackedFrame:
         @side-effect. cv2 modifies frame as it draws"""
         text_color = (0, 0, 255)
         self.box.draw_box(self.frame)
-
+        self.circle.draw_circle(self.frame)
         # Loop over the info tuples and draw them on our frame
         h = self.frame.shape[0]
         i = 0
@@ -168,6 +186,19 @@ class g_auto_tracker:
         else:
             return Box([0]*4)
 
+    def find_circle(self, frame):
+        frame = self.render(frame)
+        #Initialize area separation tracker
+        gf = glint_find(self.CPI_glint, frame)
+        center = gf.run()
+        #Update CPI
+        self.CPI_glint[1][0]+= center[2]
+        self.CPI_glint[1][1]+= center[2]
+        self.CPI_glint[0][0]+= center[3]
+        self.CPI_glint[0][1]+= center[3]
+        #Always gonna be succeassful
+        return Circle(center[0:2])
+
     def update_position(self, tframe):
         x, y = tframe.box.mid_xy()
 
@@ -203,8 +234,10 @@ class g_auto_tracker:
                 break
             #Find box
             box = self.find_box(tframe.frame)
+            circle = self.find_circle(tframe.frame)
             #Draw box
             tframe.set_box(box)
+            tframe.set_circle(circle)
             #Update file
             self.update_position(tframe)
             # Update the fps counter
