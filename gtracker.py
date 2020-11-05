@@ -69,9 +69,9 @@ class Circle:
         return (self.mid_x, self.mid_y)
 
     def draw_circle(self, frame):
-        """draw box onto a frame"""
-        circle_color = (0,255, 0)
+        """draw circle onto a frame"""
         r = 4 #Maybe it's 4?
+        circle_color = (0,255, 0)
         cv2.circle(frame, (self.mid_x_c, self.mid_y_c), r, circle_color, 2)
 
 class TrackedFrame:
@@ -157,8 +157,8 @@ class g_auto_tracker:
         (success_box, box) = self.tracker.update(self.first)
 
     def render(self, frame):
-        pp = preprocess(None, 1, self.CPI_glint, self.blur, None)
-        self.threshold = pp.d_glint()
+        # pp = preprocess(None, 1, self.CPI_glint, self.blur, None)
+        # self.threshold = pp.d_glint()
         ft = fast_tracker(frame, self.threshold, self.blur)
         blur_img = ft.noise_removal(frame)
         thre_img = ft.threshold_img(blur_img)
@@ -171,9 +171,13 @@ class g_auto_tracker:
         self.onset_labels = extraction(csv_fname)
         self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
+    def glint_threshold(self, center, sf, CPI, parameters, frame):
+        pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'], frame)
+        return pp.d_glint()
+
     def find_box(self, frame):
-        #Find box using threshold
-        #Recalculate threshold every time
+        parameters = {'blur':(1,1), 'canny':(0,0)}
+        self.threshold = self.glint_threshold(None, 1, self.CPI_glint, parameters, frame)
         frame = self.render(frame)
         #For debuging use
         cv2.imwrite("glint_testing/%d.png"%self.count, frame)
@@ -186,17 +190,13 @@ class g_auto_tracker:
         else:
             return Box([0]*4)
 
-    def find_circle(self, frame):
-        frame = self.render(frame)
+    def find_circle(self, frame, CPI):
+        # frame = self.render(frame)
         #Initialize area separation tracker
-        gf = glint_find(self.CPI_glint, frame)
+        gf = glint_find(CPI, frame)
         center = gf.run()
-        #Update CPI
-        self.CPI_glint[1][0]+= center[2]
-        self.CPI_glint[1][1]+= center[2]
-        self.CPI_glint[0][0]+= center[3]
-        self.CPI_glint[0][1]+= center[3]
         #Always gonna be succeassful
+        # print(center[0:2])
         return Circle(center[0:2])
 
     def update_position(self, tframe):
@@ -234,7 +234,7 @@ class g_auto_tracker:
                 break
             #Find box
             box = self.find_box(tframe.frame)
-            circle = self.find_circle(tframe.frame)
+            circle = self.find_circle(tframe.frame, self.CPI_glint)
             #Draw box
             tframe.set_box(box)
             tframe.set_circle(circle)

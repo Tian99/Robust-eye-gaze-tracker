@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import copy
 from statistics import stdev
 
 class glint_find():
@@ -11,11 +12,11 @@ class glint_find():
                    int(CPI[0][0]), int(CPI[0][1]),\
                    int((CPI[1][1]+CPI[1][0])/2),\
                    int((CPI[0][1]+CPI[0][0])/2))
-        self.CPI = CPI
+        self.area = copy.deepcopy(CPI)
 
     def run(self):
         #local CPI
-        CPI = self.CPI
+        local = copy.deepcopy(self.area)
         outcome = float("inf")
         coor = (0,0)
         #First calculate the original frame
@@ -34,24 +35,29 @@ class glint_find():
             run_x = 1
 
         for i in range(0, direction_y, run_y):
+            local[1][0]+= i
+            local[1][1]+= i
             for j in range(0, direction_x, run_x):
-                CPI[1][0]+= i
-                CPI[1][1]+= i
-                CPI[0][0]+= j
-                CPI[0][1]+= j
-                sa = (int(CPI[1][0]), int(CPI[1][1]),\
-                   int(CPI[0][0]), int(CPI[0][1]),\
-                   int((CPI[1][1]+CPI[1][0])/2),\
-                   int((CPI[0][1]+CPI[0][0])/2))
+                local[0][0]+= j
+                local[0][1]+= j
+                sa = (int(local[1][0]), int(local[1][1]),\
+                   int(local[0][0]), int(local[0][1]),\
+                   int((local[1][1]+local[1][0])/2),\
+                   int((local[0][1]+local[0][0])/2))
                 #send sa for calculation
+                # print(sa)
                 result = self.calculate(sa)
                 evaluation = stdev([result["tl"], result["bl"], result["br"], result["tr"]])
-                if outcome > evaluation:
+                # print(evaluation)
+                if outcome > evaluation and evaluation != 0:
                     outcome = evaluation
                     coor = (self.sa[5]+i, self.sa[4]+j, i, j)
                 #Refresh CPI
-                CPI = self.CPI
+                # print(self.area)
+                local[0][0] = self.area[0][0]
+                local[0][1] = self.area[0][1]
 
+        print(coor)
         return coor
 
     def calculate(self, sa):
@@ -120,12 +126,7 @@ class glint_find():
 
         return(direction_y, direction_x)
 
-
         #Determine the direction that the algoritum is supposed to scan
-        
-
-
-
 
 if __name__ == '__main__':
     CPI = [[124, 137], [157, 171]]
