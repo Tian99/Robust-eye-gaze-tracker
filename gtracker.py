@@ -70,7 +70,7 @@ class Circle:
 
     def draw_circle(self, frame):
         """draw circle onto a frame"""
-        r = 4 #Maybe it's 4?
+        r = 6 #Maybe it's 6?
         circle_color = (0,255, 0)
         cv2.circle(frame, (self.mid_x_c, self.mid_y_c), r, circle_color, 2)
 
@@ -195,6 +195,14 @@ class g_auto_tracker:
         #Initialize area separation tracker
         gf = glint_find(CPI, frame)
         center = gf.run()
+        #Update CPI
+        x = center[3]
+        y = center[2]
+        # #Updata CPI every time 
+        # self.CPI_glint[0][0] += x
+        # self.CPI_glint[0][1] += x
+        # self.CPI_glint[1][0] += y
+        # self.CPI_glint[1][1] += y
         #Always gonna be succeassful
         # print(center[0:2])
         return Circle(center[0:2])
