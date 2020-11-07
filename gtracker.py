@@ -4,6 +4,9 @@ from extraction import extraction
 from optimization import fast_tracker
 from preProcess import preprocess
 from glint_find import glint_find
+from HTimp import HTimp
+import numpy as np
+import copy
 import argparse
 import imutils
 import time
@@ -127,12 +130,21 @@ class g_auto_tracker:
         self.m_critical = 3 #Blink detection
         self.num_blink = 0
         self.count = 0
+        self.expand_factor = 10 #Factor that expands CPI for glint tracking
+        self.max_threshold = 220#Guess the max threshold for glint
         self.iniBB = bbox
         self.video_fname = video_fname
         self.tracker_name = tracker_name
+        #CPI to find KCF tracker
         self.CPI_glint = CPI_glint
+        #CPI to find Hough transform
+        self.varied_CPI = CPI_glint
+        #Blurring factor
         self.blur = parameters['blur']
+        #Stabel threshold used to calcualte KCF
         self.threshold = parameters['threshold']
+        #Variat threshold used to calcualte Hough Transform
+        self.vary_thesh = copy.deepcopy(self.threshold)
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -148,6 +160,12 @@ class g_auto_tracker:
         if self.settings['write_img']:
             self.p_fh = open("data_output/glint.csv", "w")
             self.p_fh.write("sample,x,y,blink\n")
+
+        #Expand CPI in all directions
+        self.varied_CPI[1][0] -= self.expand_factor
+        self.varied_CPI[1][1] += self.expand_factor
+        self.varied_CPI[0][0] -= self.expand_factor
+        self.varied_CPI[0][1] += self.expand_factor
 
     def get_input(self):
         #Render the first image to run KCF on Threshold
@@ -191,21 +209,27 @@ class g_auto_tracker:
             return Box([0]*4)
 
     def find_circle(self, frame, CPI):
-        # frame = self.render(frame)
-        #Initialize area separation tracker
+        blur = (1,1)
+        canny = (40, 50)
         gf = glint_find(CPI, frame)
-        center = gf.run()
-        #Update CPI
-        x = center[3]
-        y = center[2]
-        # #Updata CPI every time 
-        # self.CPI_glint[0][0] += x
-        # self.CPI_glint[0][1] += x
-        # self.CPI_glint[1][0] += y
-        # self.CPI_glint[1][1] += y
-        #Always gonna be succeassful
-        # print(center[0:2])
-        return Circle(center[0:2])
+        #Crop the image based upon CPI
+        #Rememer crop and CPI is reverse in terms of X annd Y
+        cropped = frame[CPI[1][0]:CPI[1][1],CPI[0][0]:CPI[0][1]]
+        #To single color layer
+        cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+        #Calculate threshold
+        thre,proc = cv2.threshold(cropped,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        #no need to blur it 
+        #Since OTSU algorithm defines the lowest threshold
+        #We need to incremet it every run to get the best result
+        for i in range(int(thre), self.max_threshold, 2):
+            #Rennder the image every time using the new threshole
+            ft = fast_tracker(cropped, (i,i), blur, canny)
+            thresholded = ft.threshold_img(cropped)
+            cannied = ft.canny_img(thresholded)
+
+        
+        return
 
     def update_position(self, tframe):
         x, y = tframe.box.mid_xy()
@@ -242,7 +266,7 @@ class g_auto_tracker:
                 break
             #Find box
             box = self.find_box(tframe.frame)
-            circle = self.find_circle(tframe.frame, self.CPI_glint)
+            circle = self.find_circle(tframe.frame, self.varied_CPI)
             #Draw box
             tframe.set_box(box)
             tframe.set_circle(circle)

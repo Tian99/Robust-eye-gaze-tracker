@@ -131,17 +131,17 @@ class main(QtWidgets.QMainWindow):
         center_glint = self.get_center(ROI_glint)
 
         #Propress the blurring factor
-        g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+        # g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
         #Change the blur to good blur
-        parameters_pupil['blur'] = g_blur
+        # parameters_pupil['blur'] = g_blur
 
         #Preprocess automatically reads in the image
-        th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
+        # th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
         #This function is mostly precaution, which does nothing....
         th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
         
         #Add the perfect threshold value
-        parameters_pupil['threshold'] = th_range_pupil 
+        # parameters_pupil['threshold'] = th_range_pupil 
         parameters_glint['threshold'] = th_range_glint
 
         #Parameters is stored as(blur, canny, threshold)
@@ -151,7 +151,7 @@ class main(QtWidgets.QMainWindow):
         t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
         t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
 
-        t2.start()
+        # t2.start()
         t3.start()
 
     #This function also calls another thread which saves all video generated images in the output file
