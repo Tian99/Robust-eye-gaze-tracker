@@ -211,6 +211,7 @@ class g_auto_tracker:
     def find_circle(self, frame, CPI):
         blur = (1,1)
         canny = (40, 50)
+        circle = None
         gf = glint_find(CPI, frame)
         #Crop the image based upon CPI
         #Rememer crop and CPI is reverse in terms of X annd Y
@@ -223,13 +224,22 @@ class g_auto_tracker:
         #Since OTSU algorithm defines the lowest threshold
         #We need to incremet it every run to get the best result
         for i in range(int(thre), self.max_threshold, 2):
-            #Rennder the image every time using the new threshole
+            #Rennder the image every time using the new thresholed
             ft = fast_tracker(cropped, (i,i), blur, canny)
             thresholded = ft.threshold_img(cropped)
             cannied = ft.canny_img(thresholded)
-
+            #Run Hough transform on the cannied image
+            ht = HTimp(cannied, 150, (200, 10), (0,0))
+            #Apologize for the format....
+            current = ht.get()
+            if current is not None:
+                current = current[0][0]
+                circle = current
+            #Map the small circle back to the original image
+            circle[0] += CPI[0][0]
+            circle[1] += CPI[1][0]
         
-        return
+        return Circle(circle)
 
     def update_position(self, tframe):
         x, y = tframe.box.mid_xy()
