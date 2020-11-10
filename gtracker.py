@@ -67,9 +67,10 @@ class Circle:
     def __init__(self, center):
         self.mid_x_c = center[0]
         self.mid_y_c = center[1]
+        self.radius = center[2]
 
     def mid_xy(self):
-        return (self.mid_x, self.mid_y)
+        return (self.mid_x_c, self.mid_y_c, self.radius)
 
     def draw_circle(self, frame):
         """draw circle onto a frame"""
@@ -131,7 +132,7 @@ class g_auto_tracker:
         self.num_blink = 0
         self.count = 0
         self.expand_factor = 10 #Factor that expands CPI for glint tracking
-        self.max_threshold = 220#Guess the max threshold for glint
+        self.max_threshold = 200#Guess the max threshold for glint
         self.iniBB = bbox
         self.video_fname = video_fname
         self.tracker_name = tracker_name
@@ -153,13 +154,13 @@ class g_auto_tracker:
         self.tracker = set_tracker(tracker_name)
         print(f"initializign tracking @ {start_frame} frame")
         self.get_input() #Reads in the perfect image and set tracker
-        self.previous = (0, 0) #Means for tidying up the data
+        self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
         # file to save pupil location
         if self.settings['write_img']:
             self.p_fh = open("data_output/glint.csv", "w")
-            self.p_fh.write("sample,x,y,blink\n")
+            self.p_fh.write("sample,x,y,r\n")
 
         #Expand CPI in all directions
         self.varied_CPI[1][0] -= self.expand_factor
@@ -209,21 +210,23 @@ class g_auto_tracker:
             return Box([0]*4)
 
     def find_circle(self, frame, CPI):
-        blur = (1,1)
+        blur = (10,10)
         canny = (40, 50)
-        circle = None
+        circle = (0,0,0)
         gf = glint_find(CPI, frame)
         #Crop the image based upon CPI
         #Rememer crop and CPI is reverse in terms of X annd Y
         cropped = frame[CPI[1][0]:CPI[1][1],CPI[0][0]:CPI[0][1]]
         #To single color layer
         cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+
         #Calculate threshold
         thre,proc = cv2.threshold(cropped,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
         #no need to blur it 
         #Since OTSU algorithm defines the lowest threshold
         #We need to incremet it every run to get the best result
-        for i in range(int(thre), self.max_threshold, 2):
+        for i in range(int(thre), int(thre)+4, 2):
             #Rennder the image every time using the new thresholed
             ft = fast_tracker(cropped, (i,i), blur, canny)
             thresholded = ft.threshold_img(cropped)
@@ -238,29 +241,21 @@ class g_auto_tracker:
             #Map the small circle back to the original image
             circle[0] += CPI[0][0]
             circle[1] += CPI[1][0]
-        
+
         return Circle(circle)
 
     def update_position(self, tframe):
-        x, y = tframe.box.mid_xy()
-
-        if not tframe.success_box:
-            self.m_range -= 1
-            self.m_critical -= 1
-        if self.m_critical <= 0 and not self.m_range <= 0:
-            self.m_range = 20
-            self.m_critical = 3
-            self.num_blink += 1
+        x, y, r = tframe.circle.mid_xy()
 
         if x != 0 and y != 0:
-            self.previous = (x,y) #The 0 index equals the previous one
+            self.previous = (x,y,r) #The 0 index equals the previous one
         else:
-            x, y = self.previous
+            x, y. r = self.previous
         # print(x,y,w,h)
         # TODO: get pupil radius.
         # TODO: if not success is count off? need count for timing
         if self.p_fh:
-            self.p_fh.write("%d,%d,%d,%d\n" % (tframe.count, x, y, self.num_blink))
+            self.p_fh.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
 
     def run_tracker(self):
         count = self.settings['start_frame']

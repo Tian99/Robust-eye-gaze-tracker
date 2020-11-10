@@ -22,7 +22,7 @@ class auto_draw:
 		# you now have a column-major 2D array of your file.
 		self.as_dict = {c[0] : c[1:] for c in self.columns}
 
-	def draw_x(self, J = False):
+	def draw_x(self, address, J = False):
 		plt.ylabel('X')
 		plt.xlabel('Label')
 		z_score = stats.zscore(self.as_dict['x'])
@@ -33,10 +33,10 @@ class auto_draw:
 			return
 		plt.legend()
 		plt.grid()
-		plt.savefig('plotting/x_pupil.png')
+		plt.savefig(address)
 		plt.close()
 
-	def draw_y(self, J = False):
+	def draw_y(self, address, J = False):
 		plt.ylabel('Y')
 		plt.xlabel('Label')
 		z_score = stats.zscore(self.as_dict['y'])
@@ -47,10 +47,10 @@ class auto_draw:
 			return 
 		plt.legend()
 		plt.grid()
-		plt.savefig('plotting/y_pupil.png')
+		plt.savefig(address)
 		plt.close()
 
-	def draw_r(self, J = False):
+	def draw_r(self, address, J = False):
 		plt.ylabel('R')
 		plt.xlabel('Label')
 		z_score = stats.zscore(self.as_dict['r'])
@@ -61,10 +61,10 @@ class auto_draw:
 			return
 		plt.legend()
 		plt.grid()
-		plt.savefig('plotting/r_pupil.png')
+		plt.savefig(address)
 		plt.close()
 
-	def draw_blink(self, J = False):
+	def draw_blink(self, address, J = False):
 		plt.ylabel('blink')
 		plt.xlabel('Label')
 		plt.plot(self.as_dict['sample'], self.as_dict['blink'], label = 'blink')
@@ -73,6 +73,6 @@ class auto_draw:
 			return
 		plt.legend()
 		plt.grid()
-		plt.savefig('plotting/blink_pupil.png')
+		plt.savefig(address)
 		plt.close()
 

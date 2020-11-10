@@ -119,7 +119,7 @@ class main(QtWidgets.QMainWindow):
         self.Plotting.setEnabled(True)
 
         parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
-        parameters_glint = {'blur': (5, 5), 'canny': (40, 50)}
+        parameters_glint = {'blur': (1, 1), 'canny': (40, 50)}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -131,17 +131,17 @@ class main(QtWidgets.QMainWindow):
         center_glint = self.get_center(ROI_glint)
 
         #Propress the blurring factor
-        # g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+        g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
         #Change the blur to good blur
-        # parameters_pupil['blur'] = g_blur
+        parameters_pupil['blur'] = g_blur
 
         #Preprocess automatically reads in the image
-        # th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
+        th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
         #This function is mostly precaution, which does nothing....
         th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
         
         #Add the perfect threshold value
-        # parameters_pupil['threshold'] = th_range_pupil 
+        parameters_pupil['threshold'] = th_range_pupil 
         parameters_glint['threshold'] = th_range_glint
 
         #Parameters is stored as(blur, canny, threshold)
@@ -151,7 +151,7 @@ class main(QtWidgets.QMainWindow):
         t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
         t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
 
-        # t2.start()
+        t2.start()
         t3.start()
 
     #This function also calls another thread which saves all video generated images in the output file
@@ -161,6 +161,9 @@ class main(QtWidgets.QMainWindow):
         self.Pupil_chose.setEnabled(True)
         self.Glint_chose.setEnabled(True)
         self.clear_folder("./output")  # TODO: DANGEROUS. maybe gui button or checkbox?
+        self.clear_folder("./glint_output")
+        self.clear_folder("./glint_testing")
+        self.clear_folder("./testing")
         self.Video = self.VideoText.text()
         self.File = self.FileText.text()
         #Check validity
@@ -245,12 +248,20 @@ class main(QtWidgets.QMainWindow):
 
 
     def plot_result(self):
+        #Plot glint
         ad = auto_draw()
         ad.read('data_output/pupil.csv')
-        ad.draw_x()
-        ad.draw_y()
-        ad.draw_r()
-        ad.draw_blink()
+        ad.draw_x('plotting/x_pupil.png')
+        ad.draw_y('plotting/y_pupil.png')
+        ad.draw_r('plotting/r_pupil.png')
+        ad.draw_blink('plotting/blink_pupil.png')
+
+        ag = auto_draw()
+        ag.read('data_output/glint.csv')    
+        ag.draw_x('plotting/x_glint.png')
+        ag.draw_y('plotting/y_glint.png')
+        ag.draw_r('plotting/r_glint.png')
+
 
     #This function is only for choosing the best open-eye picture
     #Maybe its a bit redundant, try to fix later
