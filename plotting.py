@@ -7,6 +7,7 @@ class auto_draw:
 	def __init__(self):
 		self.columns = []
 		self.as_dict = None
+		self.factor = 10
 
 	def read(self, file):
 		with open(file) as csvfile:

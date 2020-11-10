@@ -210,7 +210,7 @@ class g_auto_tracker:
             return Box([0]*4)
 
     def find_circle(self, frame, CPI):
-        blur = (10,10)
+        blur = (30,30)
         canny = (40, 50)
         circle = (0,0,0)
         gf = glint_find(CPI, frame)
@@ -226,7 +226,7 @@ class g_auto_tracker:
         #no need to blur it 
         #Since OTSU algorithm defines the lowest threshold
         #We need to incremet it every run to get the best result
-        for i in range(int(thre), int(thre)+4, 2):
+        for i in range(int(thre), int(thre)+8, 2):
             #Rennder the image every time using the new thresholed
             ft = fast_tracker(cropped, (i,i), blur, canny)
             thresholded = ft.threshold_img(cropped)
