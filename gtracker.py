@@ -2,7 +2,6 @@ from imutils.video import VideoStream
 from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
-from preProcess import preprocess
 from glint_find import glint_find
 from HTimp import HTimp
 import numpy as np
@@ -127,13 +126,10 @@ class g_auto_tracker:
         self.first = None #The first image to initialize KCF tracker
         self.p_fh = None
         self.onset_labels = None  # see set_events
-        self.m_range = 20 #Blink detection
-        self.m_critical = 3 #Blink detection
-        self.num_blink = 0
         self.count = 0
         self.expand_factor = 10 #Factor that expands CPI for glint tracking
-        self.max_threshold = 200#Guess the max threshold for glint
         self.iniBB = bbox
+        #Count for Hough Transform
         self.video_fname = video_fname
         self.tracker_name = tracker_name
         #CPI to find KCF tracker
@@ -142,10 +138,9 @@ class g_auto_tracker:
         self.varied_CPI = CPI_glint
         #Blurring factor
         self.blur = parameters['blur']
+        self.H_count = parameters['H_count']
         #Stabel threshold used to calcualte KCF
         self.threshold = parameters['threshold']
-        #Variat threshold used to calcualte Hough Transform
-        self.vary_thesh = copy.deepcopy(self.threshold)
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -190,13 +185,9 @@ class g_auto_tracker:
         self.onset_labels = extraction(csv_fname)
         self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
-    def glint_threshold(self, center, sf, CPI, parameters, frame):
-        pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'], frame)
-        return pp.d_glint()
-
     def find_box(self, frame):
         parameters = {'blur':(1,1), 'canny':(0,0)}
-        self.threshold = self.glint_threshold(None, 1, self.CPI_glint, parameters, frame)
+        # self.threshold = self.glint_threshold(None, 1, self.CPI_glint, parameters, frame)
         frame = self.render(frame)
         #For debuging use
         cv2.imwrite("glint_testing/%d.png"%self.count, frame)
@@ -209,39 +200,31 @@ class g_auto_tracker:
         else:
             return Box([0]*4)
 
-    def find_circle(self, frame, CPI):
-        blur = (30,30)
+    def find_circle(self, frame, CPI, H_count, test = False):
         canny = (40, 50)
-        circle = (0,0,0)
+        circle = [0,0,0]
         gf = glint_find(CPI, frame)
         #Crop the image based upon CPI
         #Rememer crop and CPI is reverse in terms of X annd Y
         cropped = frame[CPI[1][0]:CPI[1][1],CPI[0][0]:CPI[0][1]]
-        #To single color layer
-        cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
 
-        #Calculate threshold
-        thre,proc = cv2.threshold(cropped,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-        #no need to blur it 
-        #Since OTSU algorithm defines the lowest threshold
         #We need to incremet it every run to get the best result
-        for i in range(int(thre), int(thre)+8, 2):
-            #Rennder the image every time using the new thresholed
-            ft = fast_tracker(cropped, (i,i), blur, canny)
-            thresholded = ft.threshold_img(cropped)
-            cannied = ft.canny_img(thresholded)
-            #Run Hough transform on the cannied image
-            ht = HTimp(cannied, 150, (200, 10), (0,0))
-            #Apologize for the format....
-            current = ht.get()
-            if current is not None:
-                current = current[0][0]
-                circle = current
-            #Map the small circle back to the original image
-            circle[0] += CPI[0][0]
-            circle[1] += CPI[1][0]
-
+        ft = fast_tracker(cropped, self.threshold, self.blur, canny)
+        blurred = ft.noise_removal(cropped)
+        thresholded = ft.threshold_img(blurred)
+        cannied = ft.canny_img(thresholded)
+        #Run Hough transform on the cannied image
+        ht = HTimp(cannied, 150, (200, H_count), (0,0))
+        #Apologize for the format....
+        current = ht.get()
+        if current is not None:
+            current = current[0][0]
+            circle = current
+        #Map the small circle back to the original image
+        circle[0] += CPI[0][0]
+        circle[1] += CPI[1][0]
+        if(test):
+            return circle[0]
         return Circle(circle)
 
     def update_position(self, tframe):
@@ -271,8 +254,7 @@ class g_auto_tracker:
                 break
             #Find box
             box = self.find_box(tframe.frame)
-            circle = self.find_circle(tframe.frame, self.varied_CPI)
-            #Draw box
+            circle = self.find_circle(tframe.frame, self.varied_CPI, self.H_count, test = False)
             tframe.set_box(box)
             tframe.set_circle(circle)
             #Update file

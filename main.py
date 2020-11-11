@@ -113,13 +113,18 @@ class main(QtWidgets.QMainWindow):
         bb = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
         return bb.anal_blur(ROI_pupil, ROI_glint, self.Video)
 
+    #This is for the count in Glint detection Hough Transform
+    def get_count(self, sf, ROI, CPI, parameters):
+        cc = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
+        return cc.g_count(ROI, CPI, parameters, self.Video)
+
     def analyze(self):
 
         self.Analyze.setEnabled(False)
         self.Plotting.setEnabled(True)
 
         parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
-        parameters_glint = {'blur': (1, 1), 'canny': (40, 50)}
+        parameters_glint = {'blur': (1, 1), 'canny': (40, 50), 'H_count': 8}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -131,28 +136,30 @@ class main(QtWidgets.QMainWindow):
         center_glint = self.get_center(ROI_glint)
 
         #Propress the blurring factor
-        g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
+        # g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
         #Change the blur to good blur
-        parameters_pupil['blur'] = g_blur
+        # parameters_pupil['blur'] = g_blur
 
         #Preprocess automatically reads in the image
-        th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
+        # th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
         #This function is mostly precaution, which does nothing....
         th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
-        
         #Add the perfect threshold value
-        parameters_pupil['threshold'] = th_range_pupil 
+        # parameters_pupil['threshold'] = th_range_pupil 
         parameters_glint['threshold'] = th_range_glint
+        #Should be after the threshold is gotten
+        H_count = self.get_count(1, ROI_glint, CPI_glint, parameters_glint)
+        parameters_glint['H_count'] = H_count
 
         #Parameters is stored as(blur, canny, threshold)
         # print("ROI_pupil", ROI_pupil)
         # print("ROI_gling", ROI_glint)
 
-        t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
-        t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
+        # t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
+        # t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
 
-        t2.start()
-        t3.start()
+        # t2.start()
+        # t3.start()
 
     #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
