@@ -60,14 +60,12 @@ class preprocess:
         return (ideal_thresh) 
     def g_count(self, ROI, CPI, parameters_glint, video):
         gt = g_auto_tracker(video, ROI, CPI, parameters_glint)
-        #Start the video
         count = 0
-        #Only test on the first 250 frames
-        max_frame = 6000
-        #get all the result in a list
+        max_frame = 5000
         current = []
-        #Break down the video
-        for i in range (5, 13): 
+        minimum = float('inf');
+        result = None
+        for i in range(5, 13): 
             vs = cv2.VideoCapture(video)
             vs.set(1, count)
             while True and count < max_frame:
@@ -78,10 +76,14 @@ class preprocess:
                 #Find circle
                 circle = gt.find_circle(rframe, gt.varied_CPI, i, True)
                 current.append(int(circle))
-            print(statistics. stdev(current))
+            std = statistics.stdev(current) 
+            if(std < minimum):
+                minimum = std
+                result = i
             #Reset current
             current = []
             count = 0;
+        return result
 
     def d_glint(self):
         sample_glint = self.sample[self.search_area[0]:self.search_area[1], self.search_area[2]:self.search_area[3]]

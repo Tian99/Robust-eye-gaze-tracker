@@ -210,8 +210,8 @@ class g_auto_tracker:
 
         #We need to incremet it every run to get the best result
         ft = fast_tracker(cropped, self.threshold, self.blur, canny)
-        blurred = ft.noise_removal(cropped)
-        thresholded = ft.threshold_img(blurred)
+        # blurred = ft.noise_removal(cropped)
+        thresholded = ft.threshold_img(cropped)
         cannied = ft.canny_img(thresholded)
         #Run Hough transform on the cannied image
         ht = HTimp(cannied, 150, (200, H_count), (0,0))

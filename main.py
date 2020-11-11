@@ -15,6 +15,7 @@ from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 from Interface.video_player import VideoPlayer
 from plotting import auto_draw
+import copy
 from preProcess import preprocess
 
 class main(QtWidgets.QMainWindow):
@@ -35,6 +36,11 @@ class main(QtWidgets.QMainWindow):
         self.size_factor = (4,4)
         self.cropping_factor_pupil = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
         self.cropping_factor_glint = [[0,0],[0,0]]
+
+        #Define all the thread values
+        self.g_blur  = None
+        self.H_count = None
+        self.th_range_glint = None
 
         uic.loadUi('Interface/dum.ui', self)
         self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
@@ -111,12 +117,13 @@ class main(QtWidgets.QMainWindow):
 
     def get_blur(self, sf, CPI, parameters, ROI_pupil, ROI_glint):
         bb = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
-        return bb.anal_blur(ROI_pupil, ROI_glint, self.Video)
+        self.g_blur = bb.anal_blur(ROI_pupil, ROI_glint, self.Video)
 
     #This is for the count in Glint detection Hough Transform
     def get_count(self, sf, ROI, CPI, parameters):
-        cc = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
-        return cc.g_count(ROI, CPI, parameters, self.Video)
+        glint_CPI = copy.deepcopy(CPI)
+        cc = preprocess(None, sf, glint_CPI, parameters['blur'], parameters['canny'])
+        self.H_count = cc.g_count(ROI, glint_CPI, parameters, self.Video)
 
     def analyze(self):
 
@@ -135,31 +142,35 @@ class main(QtWidgets.QMainWindow):
         center_pupil = self.get_center(ROI_pupil)
         center_glint = self.get_center(ROI_glint)
 
+        self.th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
+        parameters_glint['threshold'] = self.th_range_glint
         #Propress the blurring factor
-        # g_blur = self.get_blur(4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint)
-        #Change the blur to good blur
-        # parameters_pupil['blur'] = g_blur
+        t1 = threading.Thread(target = self.get_blur, args = (4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint))
+        #Should be after the threshold is gotten to get the count for Hough transform
+        t2 = threading.Thread(target = self.get_count, args = (1, ROI_glint, CPI_glint, parameters_glint))
 
-        #Preprocess automatically reads in the image
-        # th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
-        #This function is mostly precaution, which does nothing....
-        th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
+        #Run the thread
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+        parameters_pupil['blur'] = self.g_blur
+        print(self.g_blur)
+        #Get the threshold based on blur
+        th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
         #Add the perfect threshold value
-        # parameters_pupil['threshold'] = th_range_pupil 
-        parameters_glint['threshold'] = th_range_glint
-        #Should be after the threshold is gotten
-        H_count = self.get_count(1, ROI_glint, CPI_glint, parameters_glint)
-        parameters_glint['H_count'] = H_count
+        parameters_pupil['threshold'] = th_range_pupil 
+        #Add the perfect H_count value
+        parameters_glint['H_count'] = self.H_count
 
         #Parameters is stored as(blur, canny, threshold)
-        # print("ROI_pupil", ROI_pupil)
-        # print("ROI_gling", ROI_glint)
 
-        # t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
-        # t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
-
-        # t2.start()
-        # t3.start()
+        t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
+        t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
+        #Start the thread for final calculation
+        t2.start()
+        t3.start()
 
     #This function also calls another thread which saves all video generated images in the output file
     def generate(self):
