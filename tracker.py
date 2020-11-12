@@ -28,7 +28,6 @@ def set_tracker(tracker_name):
     # Maybe read the video directly would be faster than reading from input file
     if int(major) == 3 and int(minor) < 3:
         return cv2.Tracker_create("kcf")
-
     # otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
     # approrpiate object tracker constructor:
     # initialize a dictionary that maps strings to their corresponding
@@ -127,9 +126,11 @@ class auto_tracker:
     ):
         # inputs
         self.t_count = 0 #Count for Hough transform
+        self.f_count = 0 #Count for the filtering
         self.num_circle = 20
         self.first = None #The first image to initialize KCF tracker
-        self.p_fh = None
+        self.original_pupil = None
+        self.filtered_pupil = None
         self.onset_labels = None  # see set_events
         self.m_range = 20 #Blink detection
         self.m_critical = 3 #Blink detection
@@ -142,21 +143,26 @@ class auto_tracker:
         self.blur = parameters['blur']
         self.canny = parameters['canny']
         self.threshold = parameters['threshold']
+        self.r_value = []
+        self.x_value = []
+        self.y_value = []
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
             "start_frame": start_frame,
             "fps": 60}
         self.tracker = set_tracker(tracker_name)
-        print(f"initializign tracking @ {start_frame} frame")
+        print(f"initializign Pupil tracking @ {start_frame} frame")
         self.get_input() #Reads in the perfect image and set tracker
         self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
         # file to save pupil location
         if self.settings['write_img']:
-            self.p_fh = open("data_output/pupil.csv", "w")
-            self.p_fh.write("sample,x,y,r,blink\n")
+            self.original_pupil = open("data_output/origin_pupil.csv", "w")
+            self.original_pupil.write("sample,x,y,r,blink\n")
+            self.filtered_pupil = open("data_output/filter_pupil.csv", "w")
+            self.filtered_pupil.write("sample,x,y,r,blink\n")
 
     def get_input(self):
         self.first = cv2.imread("input/chosen_pic.png")
@@ -231,6 +237,7 @@ class auto_tracker:
     def update_position(self, tframe):
         x_b, y_b = tframe.box.mid_xy()
         x, y, r = tframe.circle.mid_xyr()
+        self.f_count += 1
 
         if not tframe.success_box and not tframe.success_circle:
             self.m_range -= 1
@@ -244,11 +251,14 @@ class auto_tracker:
             self.previous = (x,y,r) #The 0 index equals the previous one
         else:
             x, y, r = self.previous
-        # print(x,y,w,h)
-        # TODO: get pupil radius.
-        # TODO: if not success is count off? need count for timing
-        if self.p_fh:
-            self.p_fh.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
+        if self.original_pupil:
+            self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
+        self.r_value.append(r)
+        self.x_value.append(x)
+        self.y_value.append(y)
+        #Start filtering by Z_score at 1000 mark
+        if self.filtered_pupil and self.f_count == 1000:
+            self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
 
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
@@ -284,8 +294,8 @@ class auto_tracker:
                 # only print every 250 frames. printing is slow
                 if count % 250 == 0:
                     print(
-                        "@ step %d, center = (%.02f, %.02f); %.02f fps"
-                        % (count, *tframe.box.mid_xy(), fps_measure)
+                        "@ step %d, center = (%.02f, %.02f, %0.2f); %.02f fps"
+                        % (count, *tframe.circle.mid_xyr(), fps_measure)
                     )
 
                 if self.settings.get("write_img", True):
@@ -304,8 +314,8 @@ class auto_tracker:
                     exit()
 
         print("Ending of the analysis")
-        if self.p_fh:
-            self.p_fh.close()
+        if self.original_pupil:
+            self.original_pupil.close()
             
     def event_at(self, frame_number):
         """what event is at frame number"""

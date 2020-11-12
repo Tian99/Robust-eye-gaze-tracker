@@ -59,7 +59,7 @@ class main(QtWidgets.QMainWindow):
         self.Glint_click.clicked.connect(self.store_glint)
         self.Plotting.clicked.connect(self.plot_result)
         #Only for the initial run
-        self.VideoText.setText('input/run1.mov')
+        self.VideoText.setText('input/run3.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
         self.show()

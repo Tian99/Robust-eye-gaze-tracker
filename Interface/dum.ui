@@ -186,7 +186,7 @@
      <rect>
       <x>0</x>
       <y>50</y>
-      <width>901</width>
+      <width>491</width>
       <height>20</height>
      </rect>
     </property>
@@ -212,7 +212,7 @@
      <rect>
       <x>0</x>
       <y>140</y>
-      <width>481</width>
+      <width>491</width>
       <height>16</height>
      </rect>
     </property>
@@ -447,11 +447,76 @@
       <x>800</x>
       <y>0</y>
       <width>91</width>
-      <height>51</height>
+      <height>81</height>
      </rect>
     </property>
     <property name="text">
      <string>Plot</string>
+    </property>
+   </widget>
+   <widget class="Line" name="line_8">
+    <property name="geometry">
+     <rect>
+      <x>770</x>
+      <y>-20</y>
+      <width>41</width>
+      <height>111</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>20</y>
+      <width>87</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Pupil</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_2">
+    <property name="geometry">
+     <rect>
+      <x>670</x>
+      <y>20</y>
+      <width>87</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Glint</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_3">
+    <property name="geometry">
+     <rect>
+      <x>510</x>
+      <y>60</y>
+      <width>87</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Raw</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="checkBox_4">
+    <property name="geometry">
+     <rect>
+      <x>670</x>
+      <y>60</y>
+      <width>87</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Filtered</string>
     </property>
    </widget>
   </widget>

@@ -68,7 +68,7 @@ class Circle:
         self.mid_y_c = center[1]
         self.radius = center[2]
 
-    def mid_xy(self):
+    def mid_xyr(self):
         return (self.mid_x_c, self.mid_y_c, self.radius)
 
     def draw_circle(self, frame):
@@ -147,7 +147,7 @@ class g_auto_tracker:
             "start_frame": start_frame,
             "fps": 60}
         self.tracker = set_tracker(tracker_name)
-        print(f"initializign tracking @ {start_frame} frame")
+        print(f"initializign glint tracking @ {start_frame} frame")
         self.get_input() #Reads in the perfect image and set tracker
         self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
@@ -190,7 +190,7 @@ class g_auto_tracker:
         # self.threshold = self.glint_threshold(None, 1, self.CPI_glint, parameters, frame)
         frame = self.render(frame)
         #For debuging use
-        cv2.imwrite("glint_testing/%d.png"%self.count, frame)
+        # cv2.imwrite("glint_testing/%d.png"%self.count, frame)
         self.count += 1
         self.tracker.init(frame, self.iniBB)
         (success_box, box) = self.tracker.update(frame)
@@ -228,7 +228,7 @@ class g_auto_tracker:
         return Circle(circle)
 
     def update_position(self, tframe):
-        x, y, r = tframe.circle.mid_xy()
+        x, y, r = tframe.circle.mid_xyr()
 
         if x != 0 and y != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
@@ -266,8 +266,8 @@ class g_auto_tracker:
             # only print every 250 frames. printing is slow
             if count % 250 == 0:
                 print(
-                    "@ step %d, center = (%.02f, %.02f); %.02f fps"
-                    % (count, *tframe.box.mid_xy(), fps_measure)
+                    "@ step %d, center = (%.02f, %.02f, %.02f); %.02f fps"
+                    % (count, *tframe.circle.mid_xyr(), fps_measure)
                 )
 
             if self.settings.get("write_img", True):

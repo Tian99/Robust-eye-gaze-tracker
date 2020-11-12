@@ -107,11 +107,9 @@ class preprocess:
             self.parameters['threshold'] = self.start() #Get the threshold range
             track = auto_tracker(video, ROI_pupil, self.parameters, ROI_glint)
             track.run_tracker(True)
-            print("Anal_blur")
+
             #Get the best blur using standard deviation
             std = statistics.stdev(track.testcircle)
-            print(i, i)
-            print(std)
             if std == min(g_std, std):
                 # #Get rid of exceptions
                 # if track.testcircle.count(0)/len(track.testcircle) > 0.1:
@@ -125,4 +123,4 @@ if __name__ == '__main__':
     CPI = [[50, 280], [31, 80]]
     center = (99.0, 87.0)
     setup = preprocess(center, CPI)
-    print(setup.start())
+    s(setup.start())
