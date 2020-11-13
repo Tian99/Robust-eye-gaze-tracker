@@ -5,6 +5,7 @@ from extraction import extraction
 from optimization import fast_tracker
 from HTimp import HTimp
 import argparse
+import scipy.stats as stats
 import imutils
 import time
 import cv2
@@ -28,12 +29,7 @@ def set_tracker(tracker_name):
     # Maybe read the video directly would be faster than reading from input file
     if int(major) == 3 and int(minor) < 3:
         return cv2.Tracker_create("kcf")
-    # otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
-    # approrpiate object tracker constructor:
-    # initialize a dictionary that maps strings to their corresponding
-    # OpenCV object tracker implementations
-    # grab the appropriate object tracker using our dictionary of
-    # OpenCV object tracker objects
+
     return OPENCV_OBJECT_TRACKERS[tracker_name]()
 
 class Box:
@@ -127,9 +123,11 @@ class auto_tracker:
         # inputs
         self.t_count = 0 #Count for Hough transform
         self.f_count = 0 #Count for the filtering
+        self.local_count = 0
         self.num_circle = 20
         self.first = None #The first image to initialize KCF tracker
         self.original_pupil = None
+        self.filtered_pupil = None
         self.filtered_pupil = None
         self.onset_labels = None  # see set_events
         self.m_range = 20 #Blink detection
@@ -162,7 +160,7 @@ class auto_tracker:
             self.original_pupil = open("data_output/origin_pupil.csv", "w")
             self.original_pupil.write("sample,x,y,r,blink\n")
             self.filtered_pupil = open("data_output/filter_pupil.csv", "w")
-            self.filtered_pupil.write("sample,x,y,r,blink\n")
+            self.filtered_pupil.write("sample,x,y,r\n")
 
     def get_input(self):
         self.first = cv2.imread("input/chosen_pic.png")
@@ -253,12 +251,25 @@ class auto_tracker:
             x, y, r = self.previous
         if self.original_pupil:
             self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
-        self.r_value.append(r)
-        self.x_value.append(x)
-        self.y_value.append(y)
-        #Start filtering by Z_score at 1000 mark
-        if self.filtered_pupil and self.f_count == 1000:
-            self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
+            self.r_value.append(r)
+            self.x_value.append(x)
+            self.y_value.append(y)
+
+        #Start filtering by Z_score at 2000 mark
+        if self.filtered_pupil and self.f_count >= 2000:
+            #Only calculate zscore every 1000
+            if self.f_count % 2000 == 0:
+                z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
+
+                for i in range(len(z_score)):
+                    #The threshold is meant to be three, but I figure 2 is more precise
+                    if abs(z_score[i]) >= 1:
+                        self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
+                        self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
+                        self.y_value[i+self.local_count] = self.y_value[i-1+self.local_count]
+
+                    self.filtered_pupil.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
+            self.local_count += 1
 
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
@@ -316,6 +327,8 @@ class auto_tracker:
         print("Ending of the analysis")
         if self.original_pupil:
             self.original_pupil.close()
+        if self.filtered_pupil:
+            self.filtered_pupil.close()
             
     def event_at(self, frame_number):
         """what event is at frame number"""

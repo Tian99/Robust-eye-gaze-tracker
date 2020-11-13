@@ -4,6 +4,7 @@ from extraction import extraction
 from optimization import fast_tracker
 from glint_find import glint_find
 from HTimp import HTimp
+import scipy.stats as stats
 import numpy as np
 import copy
 import argparse
@@ -31,16 +32,9 @@ def set_tracker(tracker_name):
     if int(major) == 3 and int(minor) < 3:
         return cv2.Tracker_create("kcf")
 
-    # otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
-    # approrpiate object tracker constructor:
-    # initialize a dictionary that maps strings to their corresponding
-    # OpenCV object tracker implementations
-    # grab the appropriate object tracker using our dictionary of
-    # OpenCV object tracker objects
     return OPENCV_OBJECT_TRACKERS[tracker_name]()
 
 class Box:
-    """ wrapper for boxed pupil location from tracker"""
 
     def __init__(self, boxcoords):
         boxcoords = (int(x) for x in boxcoords)
@@ -56,7 +50,6 @@ class Box:
         box_color = (255,0, 0)
         x, y, w, h = (self.x, self.y, self.w, self.h)
         cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
-        # The dot in the center that marks the center of the pupil
 
     def __repr__(self):
         return f'({self.x},{self.y}) {self.w}x{self.h}' 
@@ -94,7 +87,7 @@ class TrackedFrame:
         self.circle = circle
 
     def draw_tracking(self, text_info):
-        """add bouding box and pupil center to image
+        """add bouding box and glint center to image
         add text from text_info dict
         @param text_info dict of information to put on image
         @side-effect. cv2 modifies frame as it draws"""
@@ -123,8 +116,11 @@ class g_auto_tracker:
         self, video_fname, bbox, CPI_glint, parameters, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
         # inputs
+        self.f_count = 0
+        self.local_count = 0
         self.first = None #The first image to initialize KCF tracker
-        self.p_fh = None
+        self.original_glint = None
+        self.filtered_glint = None
         self.onset_labels = None  # see set_events
         self.count = 0
         self.expand_factor = 10 #Factor that expands CPI for glint tracking
@@ -141,6 +137,9 @@ class g_auto_tracker:
         self.H_count = parameters['H_count']
         #Stabel threshold used to calcualte KCF
         self.threshold = parameters['threshold']
+        self.r_value = []
+        self.x_value = []
+        self.y_value = []
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -152,10 +151,11 @@ class g_auto_tracker:
         self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
-        # file to save pupil location
         if self.settings['write_img']:
-            self.p_fh = open("data_output/glint.csv", "w")
-            self.p_fh.write("sample,x,y,r\n")
+            self.original_glint = open("data_output/origin_glint.csv", "w")
+            self.original_glint.write("sample,x,y,r\n")
+            self.filtered_glint = open("data_output/filter_glint.csv", "w")
+            self.filtered_glint.write("sample,x,y,r\n")
 
         #Expand CPI in all directions
         self.varied_CPI[1][0] -= self.expand_factor
@@ -230,15 +230,34 @@ class g_auto_tracker:
     def update_position(self, tframe):
         x, y, r = tframe.circle.mid_xyr()
 
+        self.f_count += 1
+
         if x != 0 and y != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
         else:
             x, y. r = self.previous
-        # print(x,y,w,h)
-        # TODO: get pupil radius.
-        # TODO: if not success is count off? need count for timing
-        if self.p_fh:
-            self.p_fh.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
+        if self.original_glint:
+            self.original_glint.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
+            self.r_value.append(r)
+            self.x_value.append(x)
+            self.y_value.append(y)
+
+
+        #Start filtering by Z_score at 2000 mark
+        if self.filtered_glint and self.f_count >= 2000:
+            #Only calculate zscore every 1000
+            if self.f_count % 2000 == 0:
+                z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
+
+                for i in range(len(z_score)):
+                    #The threshold is meant to be three, but I figure 2 is more precise
+                    if abs(z_score[i]) >= 1:
+                        self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
+                        self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
+                        self.y_value[i+self.local_count] = self.y_value[i-1+self.local_count]
+
+                    self.filtered_glint.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
+            self.local_count += 1
 
     def run_tracker(self):
         count = self.settings['start_frame']
@@ -286,8 +305,10 @@ class g_auto_tracker:
                 exit()
 
         print("Ending of the analysis")
-        if self.p_fh:
-            self.p_fh.close()
+        if self.original_glint:
+            self.original_glint.close()
+        if self.filtered_glint:
+            self.filtered_glint.close()
             
     def event_at(self, frame_number):
         """what event is at frame number"""
@@ -331,28 +352,6 @@ class g_auto_tracker:
         cv2.putText(
             frame, draw_sym, draw_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, colors[event], 2
         )
-    def annotated_plt(self):
-        """plot tracked x position.
-        annotate with eye box images and imort timing events
-        cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
-        """
-        import matplotlib.pyplot as plt
-        event_colors = {'cue': 'k', 'vgs': 'g', 'dly': 'b', 'mgs': 'r'}
-        first_frame = self.settings['start_frame']
-        last_frame = self.settings['max_frames']
-
-        # blinks get center xpos of 0. exclude those so we can zoom in on interesting things
-        plt.plot([float('nan') if x==0 else x for x in self.pupil_x])
-
-        d = self.onset_labels
-        in_range = (d.onset_frame >= first_frame) & (d.onset_frame <= last_frame)
-        d = d[in_range]
-        ymax = max(self.pupil_x)
-        ymin = min([x for x in self.pupil_x if x > 0])
-        colors = [event_colors[x] for x in d.event]
-        event_frames = d.onset_frame - first_frame
-        plt.vlines(event_frames, ymin, ymax, color=colors)
-        plt.show()
         
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)

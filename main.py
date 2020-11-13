@@ -3,20 +3,23 @@
 import os
 import sys
 import cv2
+import csv
+import copy
 import pathlib
 import threading
 import os, shutil
 import numpy as np
+import pyqtgraph as pg
+from plotting import auto_draw
+from preProcess import preprocess
 from tracker import auto_tracker
 from gtracker import g_auto_tracker
+from pyqtgraph import PlotWidget
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 from Interface.video_player import VideoPlayer
-from plotting import auto_draw
-import copy
-from preProcess import preprocess
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -59,10 +62,27 @@ class main(QtWidgets.QMainWindow):
         self.Glint_click.clicked.connect(self.store_glint)
         self.Plotting.clicked.connect(self.plot_result)
         #Only for the initial run
-        self.VideoText.setText('input/run3.mov')
+        self.VideoText.setText('input/run1.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
+
+        #Dynamic plotting
+        # self.timer = QtCore.QTimer()
+        # self.timer.setInterval(100)
+        # self.timer.timeout.connect(self.update_plot_data)
+        # self.timer.start()
+
         self.show()
+
+
+    def update_plot_data(self):
+        #Read in from the file
+        # dts = pd.read_csv('data_output/glint.csv', dtype=float , skiprows=0, nrows=5)
+
+        self.r_plot.plot(value_r, index)
+        self.x_plot.plot(value_x, index)
+        self.y_plot.plot(value_y, index)
+        self.blink.plot(value_blink, index)
 
     #The whole purpose of this function is to use multi-threading
     def tracking(self, ROI, parameters, p_glint):
@@ -268,17 +288,30 @@ class main(QtWidgets.QMainWindow):
     def plot_result(self):
         #Plot glint
         ad = auto_draw()
-        ad.read('data_output/pupil.csv')
-        ad.draw_x('plotting/x_pupil.png')
-        ad.draw_y('plotting/y_pupil.png')
-        ad.draw_r('plotting/r_pupil.png')
+        #Original Pupil
+        ad.read('data_output/origin_pupil.csv')
+        ad.draw_x('plotting/origin_x_pupil.png')
+        ad.draw_y('plotting/origin_y_pupil.png')
+        ad.draw_r('plotting/origin_r_pupil.png')
         ad.draw_blink('plotting/blink_pupil.png')
+        #filtered Pupil
+        af = auto_draw()
+        af.read('data_output/filter_pupil.csv')
+        af.draw_x('plotting/filtered_x_pupil.png')
+        af.draw_y('plotting/filtered_y_pupil.png')
+        af.draw_r('plotting/filtered_r_pupil.png')
 
         ag = auto_draw()
-        ag.read('data_output/glint.csv')    
-        ag.draw_x('plotting/x_glint.png')
-        ag.draw_y('plotting/y_glint.png')
-        ag.draw_r('plotting/r_glint.png')
+        ag.read('data_output/origin_glint.csv')    
+        ag.draw_x('plotting/origin_x_glint.png')
+        ag.draw_y('plotting/origin_y_glint.png')
+        ag.draw_r('plotting/origin_r_glint.png')
+
+        fg = auto_draw()
+        fg.read('data_output/filter_glint.csv')    
+        fg.draw_x('plotting/filtered_x_glint.png')
+        fg.draw_y('plotting/filtered_y_glint.png')
+        fg.draw_r('plotting/filtered_r_glint.png')
 
 
     #This function is only for choosing the best open-eye picture
