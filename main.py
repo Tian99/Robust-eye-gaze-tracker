@@ -10,6 +10,7 @@ import threading
 import os, shutil
 import numpy as np
 import pyqtgraph as pg
+import pandas as pd
 from plotting import auto_draw
 from preProcess import preprocess
 from tracker import auto_tracker
@@ -27,8 +28,11 @@ class main(QtWidgets.QMainWindow):
         super().__init__()
         self.width = 0
         self.height = 0
+        self.index = 0 
         self.wanted = None
         self.MyWidget = None
+        self.track_p = None
+        self.track_g = None
         self.collection = {}
         self.pic_collection = {}
         self.p_r_collection = {}
@@ -44,6 +48,9 @@ class main(QtWidgets.QMainWindow):
         self.g_blur  = None
         self.H_count = None
         self.th_range_glint = None
+        #Initialize the x and y first
+        self.x = [0]*100  # 100 time points
+        self.y = [0]*100  # 100 data points
 
         uic.loadUi('Interface/dum.ui', self)
         self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
@@ -66,35 +73,41 @@ class main(QtWidgets.QMainWindow):
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
 
+        self.data = {'r':[], 'x':[], 'y':[], 'blink':[]}
+        self.graphWidget = pg.PlotWidget()
+        self.data_line =  self.graphWidget.plot(self.x, self.y)
         #Dynamic plotting
-        # self.timer = QtCore.QTimer()
-        # self.timer.setInterval(100)
-        # self.timer.timeout.connect(self.update_plot_data)
-        # self.timer.start()
+        self.plot_count = 0
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.update_plot_data)
+        self.timer.start()
 
         self.show()
 
 
     def update_plot_data(self):
-        #Read in from the file
-        # dts = pd.read_csv('data_output/glint.csv', dtype=float , skiprows=0, nrows=5)
+        if self.track_p is not None:
+            print(self.track_p.r_value)
+            self.r_plot.plot(self.track_p.r_value, self.index)
+            self.x_plot.plot(self.track_p.x_value, self.index)
+            self.y_plot.plot(self.track_p.y_value, self.index)
+            self.blink.plot(self.track_p.num_blink, self.index)
+            #Change index to index
+            self.index += 1
 
-        self.r_plot.plot(value_r, index)
-        self.x_plot.plot(value_x, index)
-        self.y_plot.plot(value_y, index)
-        self.blink.plot(value_blink, index)
 
     #The whole purpose of this function is to use multi-threading
     def tracking(self, ROI, parameters, p_glint):
         #Initialize the eye_tracker
-        track = auto_tracker(self.Video, ROI, parameters, p_glint)
-        track.set_events(self.File)
-        track.run_tracker()
+        self.track_p = auto_tracker(self.Video, ROI, parameters, p_glint)
+        self.track_p.set_events(self.File)
+        self.track_p.run_tracker()
 
     def gtracking(self, ROI, CPI, parameters_glint):
-        track = g_auto_tracker(self.Video, ROI, CPI, parameters_glint)
-        track.set_events(self.File)
-        track.run_tracker()
+        self.track_g = g_auto_tracker(self.Video, ROI, CPI, parameters_glint)
+        self.track_g.set_events(self.File)
+        self.track_g.run_tracker()
 
     def video_call(self):
         #Construct all thr available files to video to be displayed
