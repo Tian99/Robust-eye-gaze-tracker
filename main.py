@@ -39,6 +39,7 @@ class main(QtWidgets.QMainWindow):
         self.Video = None   # Video for the patient
         self.File = None  # Data retrived by the machine
         self.f_rate = 60 #Should be presented in the file. Don't know if could be gotten using python
+        self.current_plot = 0 #Current index for dynamic plotting
         #Factor that resize the image to make the program run faster
         self.size_factor = (4,4)
         self.cropping_factor_pupil = [[0,0],[0,0]] #(start_x, end_x, start_y, end_y)
@@ -49,8 +50,6 @@ class main(QtWidgets.QMainWindow):
         self.H_count = None
         self.th_range_glint = None
         #Initialize the x and y first
-        self.x = [0]*100  # 100 time points
-        self.y = [0]*100  # 100 data points
 
         uic.loadUi('Interface/dum.ui', self)
         self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
@@ -73,28 +72,57 @@ class main(QtWidgets.QMainWindow):
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
 
-        self.data = {'r':[], 'x':[], 'y':[], 'blink':[]}
+        self.data = {'r':[0]*500, 'x':[0]*500, 'y':[0]*500, 'blink':[0]*500, 'index':list(range(0, 500))}
         self.graphWidget = pg.PlotWidget()
-        self.data_line =  self.graphWidget.plot(self.x, self.y)
+        #Initialize the plot
+        self.r_line =  self.r_plot.plot(self.data['index'], self.data['r'])
+        self.x_line =  self.x_plot.plot(self.data['index'], self.data['x'])
+        self.y_line =  self.y_plot.plot(self.data['index'], self.data['y'])
+        self.blink_line =  self.blink.plot(self.data['index'], self.data['blink'])
         #Dynamic plotting
-        self.plot_count = 0
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(60)
         self.timer.timeout.connect(self.update_plot_data)
         self.timer.start()
 
         self.show()
 
-
     def update_plot_data(self):
         if self.track_p is not None:
-            print(self.track_p.r_value)
-            self.r_plot.plot(self.track_p.r_value, self.index)
-            self.x_plot.plot(self.track_p.x_value, self.index)
-            self.y_plot.plot(self.track_p.y_value, self.index)
-            self.blink.plot(self.track_p.num_blink, self.index)
-            #Change index to index
-            self.index += 1
+
+            #Update the previous list one by one
+
+            self.data['r'] = self.data['r'][1:]
+            self.data['x'] = self.data['x'][1:]
+            self.data['y'] = self.data['y'][1:]
+            self.data['blink'] = self.data['blink'][1:]
+            self.data['index'] = self.data['index'][1:]
+
+            try:
+                self.data['r'].append(self.track_p.r_value[self.current_plot])
+                self.data['x'].append(self.track_p.x_value[self.current_plot])
+                self.data['y'].append(self.track_p.y_value[self.current_plot])
+                self.data['blink'].append(self.track_p.blink_rate[self.current_plot])
+                self.data['index'].append(self.data['index'][-1] + 1)  # Add a new value 1 higher than the last.
+            except IndexError:
+                pass
+
+            #Do the error filter
+            if(len(self.data['r']) < len(self.data['index'])):
+                self.data['r'].append(self.data['r'][-1])
+            if(len(self.data['x']) < len(self.data['index'])):
+                self.data['x'].append(self.data['x'][-1])
+            if(len(self.data['y']) < len(self.data['index'])):
+                self.data['y'].append(self.data['y'][-1])
+            if(len(self.data['blink']) < len(self.data['index'])):
+                self.data['blink'].append(self.data['blink'][-1])
+
+            self.r_line.setData(self.data['index'], self.data['r'])
+            self.x_line.setData(self.data['index'], self.data['x'])
+            self.y_line.setData(self.data['index'], self.data['y'])
+            self.blink_line.setData(self.data['index'], self.data['blink'])
+            #Upodate the current index
+            self.current_plot += 1
 
 
     #The whole purpose of this function is to use multi-threading

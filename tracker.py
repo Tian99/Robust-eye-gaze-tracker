@@ -144,6 +144,7 @@ class auto_tracker:
         self.r_value = []
         self.x_value = []
         self.y_value = []
+        self.blink_rate = []
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -254,6 +255,7 @@ class auto_tracker:
             self.r_value.append(r)
             self.x_value.append(x)
             self.y_value.append(y)
+            self.blink_rate.append(self.num_blink)
 
         #Start filtering by Z_score at 2000 mark
         if self.filtered_pupil and self.f_count >= 2000:
