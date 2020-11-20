@@ -264,7 +264,7 @@ class auto_tracker:
                 z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
 
                 for i in range(len(z_score)):
-                    #The threshold is meant to be three, but I figure 2 is more precise
+                    #The threshold is meant to be three, but I figure 1 is more precise
                     if abs(z_score[i]) >= 1:
                         self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
                         self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
