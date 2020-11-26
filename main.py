@@ -50,7 +50,11 @@ class main(QtWidgets.QMainWindow):
         self.H_count = None
         self.th_range_glint = None
         #Initialize the x and y first
-
+        self.orgdata = None
+        #The sequence is center -> picture -> center -> non_picture
+        #cue, vgs, dly, mgs
+        #Dictionary that stores all the corresponding values
+        self.stare_posi = {'cue':[], 'vgs':[], 'dly':[], 'mgs':[]}
         uic.loadUi('Interface/dum.ui', self)
         self.path = str(pathlib.Path(__file__).parent.absolute())+'/input/video.mp4'
         self.setWindowTitle('Pupil Tracking')
@@ -86,6 +90,15 @@ class main(QtWidgets.QMainWindow):
         self.timer.start()
 
         self.show()
+
+    def orgdata_handle(self):
+        self.orgdata = pd.read_csv(self.File)
+
+        #Need to multiply 60 frame/s
+        self.stare_posi['cue'] = self.orgdata['cue']*60
+        self.stare_posi['vgs'] = self.orgdata['vgs']*60
+        self.stare_posi['dly'] = self.orgdata['dly']*60
+        self.stare_posi['mgs'] = self.orgdata['mgs']*60
 
     def update_plot_data(self):
         if self.track_p is not None:
@@ -191,8 +204,8 @@ class main(QtWidgets.QMainWindow):
         self.Analyze.setEnabled(False)
         self.Plotting.setEnabled(True)
 
-        parameters_pupil = {'blur': (20, 20), 'canny': (40, 50)}
-        parameters_glint = {'blur': (1, 1), 'canny': (40, 50), 'H_count': 8}
+        parameters_pupil = {'blur': (20, 20), 'canny': (40, 50), 'stare_posi':None}
+        parameters_glint = {'blur': (1, 1), 'canny': (40, 50), 'H_count': 8, 'stare_posi':None}
 
         #Cropping factor for KCF tracker
         ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
@@ -217,15 +230,16 @@ class main(QtWidgets.QMainWindow):
         t2.join()
 
         parameters_pupil['blur'] = self.g_blur
-        print(self.g_blur)
         #Get the threshold based on blur
         th_range_pupil = self.pupil_threshold(center_pupil, 4, CPI_pupil, parameters_pupil) #4 is the shrinking factor
         #Add the perfect threshold value
         parameters_pupil['threshold'] = th_range_pupil 
         #Add the perfect H_count value
         parameters_glint['H_count'] = self.H_count
+        #Put in the ideal staring position
 
-        #Parameters is stored as(blur, canny, threshold)
+        parameters_pupil['stare_posi'] = self.stare_posi
+        parameters_glint['stare_posi'] = self.stare_posi
 
         t2 = threading.Thread(target=self.tracking, args=(ROI_pupil, parameters_pupil, ROI_glint))
         t3 = threading.Thread(target=self.gtracking, args=(ROI_glint, CPI_glint, parameters_glint))
@@ -253,6 +267,8 @@ class main(QtWidgets.QMainWindow):
             print(f"Text file '{self.File}' does not exist")
             return
 
+        #Read in the original data file
+        self.orgdata_handle()
         # disable line editing once we've picked our files to avoid confusion
         self.VideoText.setEnabled(False)
         self.FileText.setEnabled(False)
@@ -328,7 +344,7 @@ class main(QtWidgets.QMainWindow):
 
     def plot_result(self):
         #Plot glint
-        ad = auto_draw()
+        ad = auto_draw(self.stare_posi)
         #Original Pupil
         ad.read('data_output/origin_pupil.csv')
         ad.draw_x('plotting/origin_x_pupil.png')
@@ -336,19 +352,19 @@ class main(QtWidgets.QMainWindow):
         ad.draw_r('plotting/origin_r_pupil.png')
         ad.draw_blink('plotting/blink_pupil.png')
         #filtered Pupil
-        af = auto_draw()
+        af = auto_draw(self.stare_posi)
         af.read('data_output/filter_pupil.csv')
         af.draw_x('plotting/filtered_x_pupil.png')
         af.draw_y('plotting/filtered_y_pupil.png')
         af.draw_r('plotting/filtered_r_pupil.png')
 
-        ag = auto_draw()
+        ag = auto_draw(self.stare_posi)
         ag.read('data_output/origin_glint.csv')    
         ag.draw_x('plotting/origin_x_glint.png')
         ag.draw_y('plotting/origin_y_glint.png')
         ag.draw_r('plotting/origin_r_glint.png')
 
-        fg = auto_draw()
+        fg = auto_draw(self.stare_posi)
         fg.read('data_output/filter_glint.csv')    
         fg.draw_x('plotting/filtered_x_glint.png')
         fg.draw_y('plotting/filtered_y_glint.png')

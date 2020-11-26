@@ -123,7 +123,7 @@ class g_auto_tracker:
         self.filtered_glint = None
         self.onset_labels = None  # see set_events
         self.count = 0
-        self.expand_factor = 10 #Factor that expands CPI for glint tracking
+        self.expand_factor = 15 #Factor that expands CPI for glint tracking
         self.iniBB = bbox
         #Count for Hough Transform
         self.video_fname = video_fname

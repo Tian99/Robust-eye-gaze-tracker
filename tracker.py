@@ -141,6 +141,8 @@ class auto_tracker:
         self.blur = parameters['blur']
         self.canny = parameters['canny']
         self.threshold = parameters['threshold']
+        #The ideal staring position in the file
+        self.stare_posi = parameters['stare_posi']
         self.r_value = []
         self.x_value = []
         self.y_value = []
@@ -162,6 +164,7 @@ class auto_tracker:
             self.original_pupil.write("sample,x,y,r,blink\n")
             self.filtered_pupil = open("data_output/filter_pupil.csv", "w")
             self.filtered_pupil.write("sample,x,y,r\n")
+
 
     def get_input(self):
         self.first = cv2.imread("input/chosen_pic.png")

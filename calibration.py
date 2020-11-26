@@ -22,3 +22,4 @@ class auto_draw:
 
 		# you now have a column-major 2D array of your file.
 		self.as_dict = {c[0] : c[1:] for c in self.columns}
+

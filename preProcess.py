@@ -61,7 +61,7 @@ class preprocess:
     def g_count(self, ROI, CPI, parameters_glint, video):
         gt = g_auto_tracker(video, ROI, CPI, parameters_glint)
         count = 0
-        max_frame = 5000
+        max_frame = 6000
         current = []
         minimum = float('inf');
         result = None
@@ -103,7 +103,7 @@ class preprocess:
         g_std = float("inf")
         for i in self.brange:
             #First get the threshold, CPI and center should be kept same as the calling function
-            self.parameters = {"blur":(i, i), "canny":self.canny}
+            self.parameters = {"blur":(i, i), "canny":self.canny, 'stare_posi':None}
             self.parameters['threshold'] = self.start() #Get the threshold range
             track = auto_tracker(video, ROI_pupil, self.parameters, ROI_glint)
             track.run_tracker(True)
