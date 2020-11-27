@@ -48,28 +48,28 @@ class auto_draw:
 		#Add legend
 		#Specify the colors
 		while(1):
-			self.color = 'b'
+			self.color = 'c'
 			if self.stare_posi['cue'][current] < limit:
 				plt.plot(self.as_dict['sample'][int(mgs_prev):int(self.stare_posi['cue'][current])], self.as_dict['x'][int(mgs_prev):int(self.stare_posi['cue'][current])], self.color)
 			else:
 				plt.plot(self.as_dict['sample'][int(mgs_prev):int(limit)], self.as_dict['x'][int(mgs_prev):int(limit)], self.color)
 				self.finish(plt, address)
 				return
-			self.color = 'g'
+			self.color = 'b'
 			if self.stare_posi['vgs'][current] < limit:
 				plt.plot(self.as_dict['sample'][int(self.stare_posi['cue'][current]):int(self.stare_posi['vgs'][current])], self.as_dict['x'][int(self.stare_posi['cue'][current]):int(self.stare_posi['vgs'][current])], self.color)
 			else:
 				plt.plot(self.as_dict['sample'][int(self.stare_posi['cue'][current]):int(limit)], self.as_dict['x'][int(self.stare_posi['cue'][current]):int(limit)], self.color)
 				self.finish(plt, address)
 				return
-			self.color = 'r'
+			self.color = 'g'
 			if self.stare_posi['dly'][current] < limit:
 				plt.plot(self.as_dict['sample'][int(self.stare_posi['vgs'][current]):int(self.stare_posi['dly'][current])], self.as_dict['x'][int(self.stare_posi['vgs'][current]):int(self.stare_posi['dly'][current])], self.color)
 			else:
 				plt.plot(self.as_dict['sample'][int(self.stare_posi['vgs'][current]):int(limit)], self.as_dict['x'][int(self.stare_posi['vgs'][current]):int(limit)], self.color)
 				self.finish(plt, address)
 				return
-			self.color = 'c'
+			self.color = 'r'
 			if self.stare_posi['mgs'][current] < limit:
 				plt.plot(self.as_dict['sample'][int(self.stare_posi['dly'][current]):int(self.stare_posi['mgs'][current])], self.as_dict['x'][int(self.stare_posi['dly'][current]):int(self.stare_posi['mgs'][current])], self.color)
 			else:
