@@ -133,6 +133,7 @@ class auto_tracker:
         self.m_range = 20 #Blink detection
         self.m_critical = 3 #Blink detection
         self.num_blink = 0
+        #Number of distinct data that enable the algoritm to determine which state it is.s
         self.testcircle = []
         self.iniBB = bbox
         self.video_fname = video_fname
