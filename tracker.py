@@ -198,7 +198,7 @@ class auto_tracker:
         @param video_fname - input video file
         @param bbox        - [x,y,w,h] bounding box (TODO: is that correct order of dims?)
         @param ft_params  -  optimization.py:fast_tracker paramaters dictionary
-                             (canny, blur, threshold=[low,high])
+                             (canny=[], blur=[], threshold=[low,high])
         """
         # inputs
         self.t_count = 0 #Count for Hough transform
@@ -453,7 +453,9 @@ class auto_tracker:
 
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)
-    ft_pupil_params = {'blur': (20, 20), 'canny': (40, 50), 'threshold': (0, 200)}
+    ft_pupil_params = {'blur': (20, 20),
+                       'canny': (40, 50),
+                       'threshold': (0, 200)}
     track = auto_tracker("input/run1.mov", bbox, ft_pupil_params,
                          write_img=True, max_frames=500)
     track.run_tracker()

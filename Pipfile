@@ -4,8 +4,10 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-opencv-python = "*"
-opencv-contrib-python = "*"
+# opencv-python = "*" # must not exist?! 20201128
+# https://pypi.org/project/opencv-contrib-python/
+# https://github.com/opencv/opencv/issues/15723
+opencv-contrib-python-headless = "*"
 pandas = "*"
 matplotlib = "*"
 pyqt5 = "*"
