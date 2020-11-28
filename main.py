@@ -72,7 +72,7 @@ class main(QtWidgets.QMainWindow):
         self.Glint_click.clicked.connect(self.store_glint)
         self.Plotting.clicked.connect(self.plot_result)
         #Only for the initial run
-        self.VideoText.setText('input/run1.mov')
+        self.VideoText.setText('input/10997_20180818_run1_115620.avi.avi')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
         self.player = VideoPlayer(self, self.path)
 
@@ -383,10 +383,9 @@ class main(QtWidgets.QMainWindow):
             ret, frame = cap.read()
             if ret == False:
                 break
-            #Need to figure out a way to downscale the image to make it run faster
+    
             self.height = frame.shape[0]
             self.width = frame.shape[1]
-            # frame = cv2.resize(frame,(int(self.width/self.size_factor[0]), int(self.height/self.size_factor[1])))
             if limit != None:
                 #Test for the non-blinking image(Find image with the larggest dark space)
                 if len(np.where(frame < 100)[0]) > maximum and i < limit:
