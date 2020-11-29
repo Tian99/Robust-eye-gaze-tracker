@@ -1,4 +1,3 @@
-from imutils.video import VideoStream
 from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
@@ -7,11 +6,9 @@ from HTimp import HTimp
 import scipy.stats as stats
 import numpy as np
 import copy
-import argparse
-import imutils
-import time
 import cv2
 
+#For user to choose different tracking resorts
 OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
     "kcf": cv2.TrackerKCF_create,
@@ -22,18 +19,20 @@ OPENCV_OBJECT_TRACKERS = {
     "mosse": cv2.TrackerMOSSE_create,
 }
 
+'''
+tracker definition depends on opencv version
+'''
 def set_tracker(tracker_name):
-    """tracker definition depends on opencv version"""
     # extract the OpenCV version info
     (major, minor) = cv2.__version__.split(".")[:2]
-    # if we are using OpenCV 3.2 OR BEFORE, we can use a special factory
-    # function to create our object tracker
-    # Maybe read the video directly would be faster than reading from input file
     if int(major) == 3 and int(minor) < 3:
         return cv2.Tracker_create("kcf")
 
     return OPENCV_OBJECT_TRACKERS[tracker_name]()
 
+'''
+wrapper for boxed pupil location from tracker
+'''
 class Box:
 
     def __init__(self, boxcoords):
@@ -54,9 +53,13 @@ class Box:
     def __repr__(self):
         return f'({self.x},{self.y}) {self.w}x{self.h}' 
 
+'''
+wrapper for circled pupil location from tracker
+'''
 class Circle:
 
     def __init__(self, center):
+        #Get the center and radius for the circle detected in Hough Transform
         self.mid_x_c = center[0]
         self.mid_y_c = center[1]
         self.radius = center[2]
@@ -65,38 +68,43 @@ class Circle:
         return (self.mid_x_c, self.mid_y_c, self.radius)
 
     def draw_circle(self, frame):
-        """draw circle onto a frame"""
-        r = 6 #Maybe it's 6?
+        #I guessed the radius here
+        r = 6
         circle_color = (0,255, 0)
         cv2.circle(frame, (self.mid_x_c, self.mid_y_c), r, circle_color, 2)
 
+'''
+a frame and it's tracking info
+'''
 class TrackedFrame:
-    """a frame and it's tracking info"""
 
     def __init__(self, frame, count):
-        self.frame = frame    # for saving image
-        self.count = count    # image filename
-        self.box = None       # save image overlay: box
-        self.success_box = False  # save image overlay: text
+        self.frame = frame    
+        self.count = count   
+        #Variables whether the tracking is successful or not
+        self.box = None   
+        self.success_box = False 
 
     def set_box(self, box):
         self.box = box
         self.success_box = self.box.w != 0
 
     def set_circle(self, circle):
+        #We gonna focus primarily focus on circle in glint detection
         self.circle = circle
 
+    '''
+    add bouding box and pupil center to image
+    '''
     def draw_tracking(self, text_info):
-        """add bouding box and glint center to image
-        add text from text_info dict
-        @param text_info dict of information to put on image
-        @side-effect. cv2 modifies frame as it draws"""
         text_color = (0, 0, 255)
         self.box.draw_box(self.frame)
         self.circle.draw_circle(self.frame)
+
         # Loop over the info tuples and draw them on our frame
         h = self.frame.shape[0]
         i = 0
+        # Put text to the image
         for (k, v) in enumerate(text_info):
             text = "{}: {}".format(k, v)
             pos = (10, h - ((i * 20) + 20))
@@ -109,37 +117,66 @@ class TrackedFrame:
     def save_frame(self):
         cv2.imwrite("glint_output/%015d.png" % self.count, self.frame)
 
+'''
+Class the controls the track for pupil overall
+'''
 class g_auto_tracker:
-    """eye tracker"""
-
     def __init__(
         self, video_fname, bbox, CPI_glint, parameters, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
-        # inputs
+        '''
+        variables that controls the z_score filter
+        '''
         self.f_count = 0
         self.local_count = 0
-        self.first = None #The first image to initialize KCF tracker
+
+        '''
+        First image to initialize the KCF tracker
+        '''
+        self.first = None 
+
+        '''
+        Variables that represent file data should be written to
+        '''
         self.original_glint = None
         self.filtered_glint = None
-        self.onset_labels = None  # see set_events
-        self.count = 0
-        self.expand_factor = 15 #Factor that expands CPI for glint tracking
+
+        '''
+        Output evens to the image
+        '''
+        self.onset_labels = None 
+
+        '''
+        Factor that expands CPI for glint tracking
+        The idea here is that we need to expand the CPI for a better glint detection
+        because the original area would need to cover all the potential places that
+        glint would occur for all frames
+        '''
+        self.expand_factor = 15
+
+        '''
+        Data that's crucial to the tracker
+        '''
         self.iniBB = bbox
-        #Count for Hough Transform
         self.video_fname = video_fname
         self.tracker_name = tracker_name
-        #CPI to find KCF tracker
         self.CPI_glint = CPI_glint
-        #CPI to find Hough transform
+        self.count = 0
         self.varied_CPI = CPI_glint
-        #Blurring factor
         self.blur = parameters['blur']
         self.H_count = parameters['H_count']
-        #Stabel threshold used to calcualte KCF
         self.threshold = parameters['threshold']
+
+        '''
+        Values that handles zscore as well as dynamic plotting
+        '''
         self.r_value = []
         self.x_value = []
         self.y_value = []
+
+        '''
+        Tracker settings
+        '''
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -147,15 +184,25 @@ class g_auto_tracker:
             "fps": 60}
         self.tracker = set_tracker(tracker_name)
         print(f"initializign glint tracking @ {start_frame} frame")
-        self.get_input() #Reads in the perfect image and set tracker
-        self.previous = (0, 0, 0) #Means for tidying up the data
-        #Calculate the threshold as well for Hough Transform
-        # this image is used to construct the image tracker
+
+        '''
+        File handling based on settings
+        '''
         if self.settings['write_img']:
             self.original_glint = open("data_output/origin_glint.csv", "w")
             self.original_glint.write("sample,x,y,r\n")
             self.filtered_glint = open("data_output/filter_glint.csv", "w")
             self.filtered_glint.write("sample,x,y,r\n")
+
+        '''
+        Get the perfect image that's stored in the input
+        '''
+        self.get_input()
+
+        '''
+        If failed, current will be set to previous
+        '''
+        self.previous = (0, 0, 0) 
 
         #Expand CPI in all directions
         self.varied_CPI[1][0] -= self.expand_factor
@@ -163,35 +210,44 @@ class g_auto_tracker:
         self.varied_CPI[0][0] -= self.expand_factor
         self.varied_CPI[0][1] += self.expand_factor
 
+    '''
+    Function that reads in the image and renders it
+    The parameters used for rendering is gotten from
+    the preprocessing
+    '''
     def get_input(self):
-        #Render the first image to run KCF on Threshold
         self.first = cv2.imread("input/chosen_pic.png")
         self.first = self.render(self.first)
+        #initialize the tracker
         self.tracker.init(self.first, self.iniBB)
         (success_box, box) = self.tracker.update(self.first)
 
+    '''
+    Function that output the rendered iamge
+    We don't need edged image here, only thresholded for KCF tracker.
+    '''
     def render(self, frame):
-        # pp = preprocess(None, 1, self.CPI_glint, self.blur, None)
-        # self.threshold = pp.d_glint()
         ft = fast_tracker(frame, self.threshold, self.blur)
         blur_img = ft.noise_removal(frame)
         thre_img = ft.threshold_img(blur_img)
-        # cv2.imwrite("look.png", thre_img)
-        # exit()
         return thre_img
 
+    '''
+    set task event info from csv_filename
+    '''
     def set_events(self, csv_fname):
-        """set task event info from csv_filename"""
         self.onset_labels = extraction(csv_fname)
         self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
+    '''
+    Find box using threshold from KCF tracker
+    '''
     def find_box(self, frame):
+        #Based on my experiments, it works best when blur equals 1 and no canny on KCF
         parameters = {'blur':(1,1), 'canny':(0,0)}
-        # self.threshold = self.glint_threshold(None, 1, self.CPI_glint, parameters, frame)
         frame = self.render(frame)
-        #For debuging use
-        # cv2.imwrite("glint_testing/%d.png"%self.count, frame)
         self.count += 1
+        #Initialize the KCF tracker
         self.tracker.init(frame, self.iniBB)
         (success_box, box) = self.tracker.update(frame)
 
@@ -200,7 +256,11 @@ class g_auto_tracker:
         else:
             return Box([0]*4)
 
+    '''
+    Function that finds the hough transform circle and handles the pre-processing
+    '''
     def find_circle(self, frame, CPI, H_count, test = False):
+        #Canny is guessed becaused it really doesn't matter much
         canny = (40, 50)
         circle = [0,0,0]
         gf = glint_find(CPI, frame)
@@ -210,7 +270,7 @@ class g_auto_tracker:
 
         #We need to incremet it every run to get the best result
         ft = fast_tracker(cropped, self.threshold, self.blur, canny)
-        # blurred = ft.noise_removal(cropped)
+        #Now we need canny for the Hough transform to run properly
         thresholded = ft.threshold_img(cropped)
         cannied = ft.canny_img(thresholded)
         #Run Hough transform on the cannied image
@@ -221,27 +281,40 @@ class g_auto_tracker:
             current = current[0][0]
             circle = current
         #Map the small circle back to the original image
+        #Need to add up the displacements
         circle[0] += CPI[0][0]
         circle[1] += CPI[1][0]
+        #Don't return true value if it's in a test
         if(test):
             return circle[0]
         return Circle(circle)
 
-    def update_position(self, tframe):
-        x, y, r = tframe.circle.mid_xyr()
+    '''
+    Collections of append methods
+    '''
+    def append_data(self, x,y,r):
+            self.r_value.append(r)
+            self.x_value.append(x)
+            self.y_value.append(y)
 
+    '''
+    Can't really calculate blink in glint trackingm
+    So this one puts values in the file and calculate z_score
+    '''
+    def update_position(self, tframe):
+        #Get the coordinates for Hough transform outcomes
+        #The KCF doesn't really seem to worl
+        x, y, r = tframe.circle.mid_xyr()
         self.f_count += 1
 
+        #Set it to previous if the tracker fails
         if x != 0 and y != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
         else:
             x, y. r = self.previous
         if self.original_glint:
             self.original_glint.write("%d,%d,%d,%d\n" % (tframe.count, x, y, r))
-            self.r_value.append(r)
-            self.x_value.append(x)
-            self.y_value.append(y)
-
+            self.append_data(x, y, r)
 
         #Start filtering by Z_score at 2000 mark
         if self.filtered_glint and self.f_count >= 2000:
@@ -259,23 +332,30 @@ class g_auto_tracker:
                     self.filtered_glint.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
             self.local_count += 1
 
+    '''
+    big function that runs the tracker
+    '''
     def run_tracker(self):
         count = self.settings['start_frame']
         #Break down the video
         vs = cv2.VideoCapture(self.video_fname)
         vs.set(1, count)
         while True and count < self.settings["max_frames"]:
+            #Start iterating each and every frame starting fromthe very beginning
             count += 1
             fps = FPS().start()
             rframe = vs.read()[1]
             tframe = TrackedFrame(rframe, count)
             if tframe.frame is None:
                 break
-            #Find box
+
+            #Run each method to find KCF box and Hough Transform circle
             box = self.find_box(tframe.frame)
             circle = self.find_circle(tframe.frame, self.varied_CPI, self.H_count, test = False)
+            #Set the found box and circle
             tframe.set_box(box)
             tframe.set_circle(circle)
+
             #Update file
             self.update_position(tframe)
             # Update the fps counter
@@ -309,19 +389,22 @@ class g_auto_tracker:
             self.original_glint.close()
         if self.filtered_glint:
             self.filtered_glint.close()
-            
+
+    '''
+    what event is at frame number
+    '''
     def event_at(self, frame_number):
-        """what event is at frame number"""
         up_to_idx = self.onset_labels['onset_frame'] <= frame_number
         event_row = self.onset_labels[up_to_idx].tail(1).reset_index()
         if len(event_row) == 0:
             return {'event': ["None"], 'side': ["None"]}
         return event_row
 
-    def draw_event(self, frame, frame_number):
-        """draw what event we are in if we have onset_labels
+    '''draw what event we are in if we have onset_labels
         @param frame - frame to draw on (modify in place)
-        @param frame_number - how far into the task are we 'count' elsewhere"""
+        @param frame_number - how far into the task are we 'count' elsewhere
+    '''
+    def draw_event(self, frame, frame_number):
         if self.onset_labels is None:
             return
 

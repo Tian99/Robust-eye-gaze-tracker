@@ -1,6 +1,6 @@
 import cv2
-from tracker import auto_tracker
-from gtracker import g_auto_tracker
+from pupil_tracker import auto_tracker
+from glint_tracker import g_auto_tracker
 from optimization import fast_tracker
 import threading
 import statistics 
@@ -87,11 +87,11 @@ class preprocess:
             count = 0;
         return result
 
+    """
+    glint threshold from blurred "search_area"
+    search_area likely from user drawn box
+    """
     def d_glint(self):
-        """
-        glint threshold from blurred "search_area"
-        search_area likely from user drawn box
-        """
         if self.search_area[0] == 0 and self.search_area[1] == 0:
             raise Exception('glint search area is empty!')
         sample_glint = self.sample[self.search_area[0]:self.search_area[1], self.search_area[2]:self.search_area[3]]

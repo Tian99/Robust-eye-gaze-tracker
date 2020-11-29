@@ -1,15 +1,11 @@
-from imutils.video import VideoStream
+from HTimp import HTimp
 from imutils.video import FPS
-from collections import defaultdict
 from extraction import extraction
 from optimization import fast_tracker
-from HTimp import HTimp
-import argparse
 import scipy.stats as stats
-import imutils
-import time
 import cv2
 
+#For user to choose different tracking resorts
 OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
     "kcf": cv2.TrackerKCF_create,
@@ -20,8 +16,10 @@ OPENCV_OBJECT_TRACKERS = {
     "mosse": cv2.TrackerMOSSE_create,
 }
 
+'''
+tracker definition depends on opencv version
+'''
 def set_tracker(tracker_name):
-    """tracker definition depends on opencv version"""
     # extract the OpenCV version info
     (major, minor) = cv2.__version__.split(".")[:2]
     if int(major) == 3 and int(minor) < 3:
@@ -29,9 +27,10 @@ def set_tracker(tracker_name):
 
     return OPENCV_OBJECT_TRACKERS[tracker_name]()
 
+'''
+wrapper for boxed pupil location from tracker
+'''
 class Box:
-    """ wrapper for boxed pupil location from tracker"""
-
     def __init__(self, boxcoords):
         boxcoords = (int(x) for x in boxcoords)
         self.x, self.y, self.w, self.h = boxcoords
@@ -53,8 +52,10 @@ class Box:
     def __repr__(self):
         return f'({self.x},{self.y}) {self.w}x{self.h}' 
 
+'''
+wrapper for circled pupil location from tracker
+'''
 class Circle:
-    """ wrapper for circled pupil location from tracker"""
 
     def __init__(self, circlecoords):
         circlecoords = (int(x) for x in circlecoords)
@@ -69,14 +70,17 @@ class Circle:
         cv2.circle(frame, (self.x, self.y), self.r, circle_color, 2)
         cv2.circle(frame, (self.x, self.y), 5, center_color, -1)
 
+'''
+a frame and it's tracking info
+'''
 class TrackedFrame:
-    """a frame and it's tracking info"""
 
     def __init__(self, frame, count):
-        self.frame = frame    # for saving image
-        self.count = count    # image filename
-        self.box = None       # save image overlay: box
-        self.success_box = False  # save image overlay: text
+        self.frame = frame  
+        self.count = count
+        self.box = None
+        #Variables whether the tracking is successful or not
+        self.success_box = False
         self.success_circle = False
 
     def set_box(self, box):
@@ -87,18 +91,18 @@ class TrackedFrame:
         self.circle = circle
         self.success_circle = self.circle.r != 0
 
+    '''
+    add bouding box and pupil center to image
+    '''
     def draw_tracking(self, text_info):
-        """add bouding box and pupil center to image
-        add text from text_info dict
-        @param text_info dict of information to put on image
-        @side-effect. cv2 modifies frame as it draws"""
         text_color = (0, 0, 255)
+        h = self.frame.shape[0]
+        i = 0
+        #Draw both box and circle to the frame
         self.box.draw_box(self.frame)
         self.circle.draw_circle(self.frame)
 
-        # Loop over the info tuples and draw them on our frame
-        h = self.frame.shape[0]
-        i = 0
+        # Put text to the image
         for (k, v) in enumerate(text_info):
             text = "{}: {}".format(k, v)
             pos = (10, h - ((i * 20) + 20))
@@ -106,31 +110,53 @@ class TrackedFrame:
                 self.frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2
             )
             i = i + 1
-            # how the output frame
 
     def save_frame(self):
         cv2.imwrite("output/%015d.png" % self.count, self.frame)
 
+'''
+Class that controls the track for pupil overall
+'''
 class auto_tracker:
-    """eye tracker"""
-
     def __init__(
         self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
-        # inputs
-        self.t_count = 0 #Count for Hough transform
-        self.f_count = 0 #Count for the filtering
+        '''
+        variables that controls the z_score filter
+        '''
+        self.f_count = 0
         self.local_count = 0
+
+        '''
+        Variable needed in Fast Hough Transform(HTimp.py)
+        '''
         self.num_circle = 20
-        self.first = None #The first image to initialize KCF tracker
+        '''
+        First image to initialize the KCF tracker
+        '''
+        self.first = None
+
+        '''
+        Variables that represent file data should be written to
+        '''
         self.original_pupil = None
         self.filtered_pupil = None
-        self.filtered_pupil = None
-        self.onset_labels = None  # see set_events
-        self.m_range = 20 #Blink detection
-        self.m_critical = 3 #Blink detection
+
+        '''
+        Output evens to the image
+        '''
+        self.onset_labels = None
+
+        '''
+        Variables that detect and record blink preset of course
+        '''
+        self.m_range = 20
+        self.m_critical = 3 
         self.num_blink = 0
-        #Number of distinct data that enable the algoritm to determine which state it is.s
+
+        '''
+        Data that's crucial to the tracker
+        '''
         self.testcircle = []
         self.iniBB = bbox
         self.video_fname = video_fname
@@ -139,12 +165,23 @@ class auto_tracker:
         self.blur = parameters['blur']
         self.canny = parameters['canny']
         self.threshold = parameters['threshold']
-        #The ideal staring position in the file
+
+        '''
+        Staring position
+        '''
         self.stare_posi = parameters['stare_posi']
+
+        '''
+        Values that handles zscore as well as dynamic plotting
+        '''
         self.r_value = []
         self.x_value = []
         self.y_value = []
         self.blink_rate = []
+
+        '''
+        Tracker settings
+        '''
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -152,42 +189,60 @@ class auto_tracker:
             "fps": 60}
         self.tracker = set_tracker(tracker_name)
         print(f"initializign Pupil tracking @ {start_frame} frame")
-        self.get_input() #Reads in the perfect image and set tracker
-        self.previous = (0, 0, 0) #Means for tidying up the data
-        #Calculate the threshold as well for Hough Transform
-        # this image is used to construct the image tracker
-        # file to save pupil location
+
+        '''
+        File handling based on settings
+        '''
         if self.settings['write_img']:
             self.original_pupil = open("data_output/origin_pupil.csv", "w")
             self.original_pupil.write("sample,x,y,r,blink\n")
             self.filtered_pupil = open("data_output/filter_pupil.csv", "w")
             self.filtered_pupil.write("sample,x,y,r\n")
 
+        '''
+        Get the perfect image that's stored in the input
+        '''
+        self.get_input()
 
+        '''
+        If failed, current will be set to previous
+        '''
+        self.previous = (0, 0, 0) 
+
+    '''
+    Function that reads in the image and renders it
+    The parameters used for rendering is gotten from
+    the preprocessing
+    '''
     def get_input(self):
-        #Read in image chosen and render it as well
         self.first = cv2.imread("input/chosen_pic.png")
         self.first = self.render(self.first)[1]
+        #initialize the tracker
         self.tracker.init(self.first, self.iniBB)
         (success_box, box) = self.tracker.update(self.first)
 
+    '''
+    set task event info from csv_filename
+    '''
     def set_events(self, csv_fname):
-        """set task event info from csv_filename"""
         self.onset_labels = extraction(csv_fname)
         self.onset_labels['onset_frame'] = [int(x) for x in self.onset_labels.onset*self.settings['fps']]
 
+    '''
+    Renders the image and get the perfect edged image and threshold image
+    Using the parameters passed in by the main
+    '''
     def render(self, frame):
-        #Get the perfect edge image
         ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
         result = ft.prepossing()
         edged = result[0]
         threshold = result[1]
         return (edged, threshold)
-        #This is for testing
-        # cv2.imwrite("testing/%d.png"%self.t_count, edged)
 
+    '''
+    Find box using threshold from KCF tracker
+    '''
     def find_box(self, frame):
-        #Find box using threshold
         frame = self.render(frame)[1]
         self.tracker.init(frame, self.iniBB)
         (success_box, box) = self.tracker.update(frame)
@@ -196,37 +251,49 @@ class auto_tracker:
             return Box(box)
         else:
             return Box([0]*4)
-        
+    
+    '''
+    Find circle using Hough Transform tracker
+    '''
     def find_circle(self, frame, pretest):
-        #Get the processed image(blurred, thresholded, and cannied)
+        #First process the image
+        #0 returns the edged image
         edged = self.render(frame)[0]
-        self.t_count += 1
         #Analyzing using the edged image
-        #The parameters need to be changed for detecting glint(or not)
         ht = HTimp(edged, 150, (255, self.num_circle))
         circle = ht.get()
         #Filter out the useful circles.
-        if not pretest: #Need true data when doing pretest
+        #Pretest is pre-processing, they call the same function
+        if not pretest:
             circle = self.filter(edged, ht.get())
 
+        #Get the circle object
         if circle is not None:
             return Circle(circle[0][0])
         else:
             return Circle([0]*3)
 
-    #Filter out the unhealthy circle and recalculate for useful data
+    '''
+    Filter out the unhealthy circle and recalculate for useful data
+    The idea here is to reduce the count for Hough Transform to get the circle
+    Until the circle is fetched. After that, compare it with the glint diameter.
+    If making sense, then that's gonna be the new outcome. 
+    '''
     def filter(self, edged, circle):
-        k = self.num_circle - 1; #One less than the previous defined number 
+        #Change the successful count for Hough transform to lower to voting standard
+        k = self.num_circle - 1;
         diameter = circle[0][0][2]*2 if circle is not None else None
         while (diameter is None or \
               diameter >= min(self.iniBB[2], self.iniBB[3])or\
               diameter <= min(self.ROI_glint[2], self.ROI_glint[3])) and\
               k > self.num_circle - 6:
+            #Recalculate the Hough Transform using the new standard
             ht = HTimp(edged, 150, (255, k))
             circle = ht.get()
             diameter = circle[0][0][2]*2 if circle is not None else None
             k -= 1
 
+        #Comparing with the glint
         if diameter is None or\
            diameter >= min(self.iniBB[2], self.iniBB[3]) or\
            diameter <= min(self.ROI_glint[2], self.ROI_glint[3]):
@@ -234,18 +301,30 @@ class auto_tracker:
 
         return circle
 
-
+    '''
+    Collections of append methods
+    '''
     def append_data(self, x,y,r,blink):
             self.r_value.append(r)
             self.x_value.append(x)
             self.y_value.append(y)
             self.blink_rate.append(self.num_blink)
 
+    '''
+    Calculates blink, put the data in a list as well as in a csv file
+    '''
     def update_position(self, tframe):
+        #Get the coordinates for Hough transform and KCF tracker outcomes
         x_b, y_b = tframe.box.mid_xy()
         x, y, r = tframe.circle.mid_xyr()
+        #This one limit the z-score calculator
         self.f_count += 1
 
+        '''
+        BLINK DETECTION 
+        This idea here is that if within 20 frames, there exists 3 frames that both KCF and hough transform
+        failed, then it is identified as a blink
+        '''
         if not tframe.success_box and not tframe.success_circle:
             self.m_range -= 1
             self.m_critical -= 1
@@ -254,6 +333,7 @@ class auto_tracker:
             self.m_critical = 3
             self.num_blink += 1
 
+        #Set it to previous if the tracker fails
         if x != 0 and y != 0 and r != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
         else:
@@ -264,7 +344,14 @@ class auto_tracker:
             self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
             self.append_data(x, y, r, self.num_blink)
 
-        #Start filtering by Z_score at 2000 mark
+        '''
+        Z_SCORE CALCULATION
+        Start filtering by Z_score at 2000 mark
+        The idea here is that get the standard deviation of radius every 2000 runs,
+        since radius would be roughly constant for normal people
+        if there is a frame with std difference greater than 1, it is a bad detection,
+        make it equal to the prvious frame value.
+        '''
         if self.filtered_pupil and self.f_count >= 2000:
             #Only calculate zscore every 1000
             if self.f_count % 2000 == 0:
@@ -280,11 +367,17 @@ class auto_tracker:
                     self.filtered_pupil.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
             self.local_count += 1
 
+    '''
+    big function that runs the tracker
+    '''
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
+        #Transform the video into frames
         vs = cv2.VideoCapture(self.video_fname)
         vs.set(1, count)
+        #Start iterating each and every frame starting fromthe very beginning
         while True and count < self.settings["max_frames"]:
+            #Here just handling the frames
             count += 1
             fps = FPS().start()
             rframe = vs.read()[1]
@@ -292,21 +385,26 @@ class auto_tracker:
             if tframe.frame is None:
                 break
 
+            #Run each method to find KCF box and Hough Transform circle
             box = self.find_box(tframe.frame)
             circle = self.find_circle(tframe.frame, pretest)
+            #Set the found box and circle
             tframe.set_box(box)
             tframe.set_circle(circle)
+
+            #This one is for pretest(pre-pre-processing)since they run the same function
+            #Upload to the file if it not pretest(pre-processing)
             if pretest:
-                self.testcircle.append(circle.x) #Test circle for the convience of blur test
+                self.testcircle.append(circle.x)
             else:
-                #No need to update file if it's just a text
                 self.update_position(tframe)
+
             # Update the fps counter
             fps.update()
             fps.stop()
             fps_measure = fps.fps()
 
-            #End pretest after 200 cases
+            #Don't print anything is it is under pretest(pre-processing)
             if count >= 250 and pretest:
                 return
 
@@ -333,24 +431,28 @@ class auto_tracker:
                 if key == ord("q"):
                     exit()
 
+        #Close with manner
         print("Ending of the analysis")
         if self.original_pupil:
             self.original_pupil.close()
         if self.filtered_pupil:
             self.filtered_pupil.close()
-            
+    
+    '''
+    what event is at frame number
+    '''
     def event_at(self, frame_number):
-        """what event is at frame number"""
         up_to_idx = self.onset_labels['onset_frame'] <= frame_number
         event_row = self.onset_labels[up_to_idx].tail(1).reset_index()
         if len(event_row) == 0:
             return {'event': ["None"], 'side': ["None"]}
         return event_row
 
-    def draw_event(self, frame, frame_number):
-        """draw what event we are in if we have onset_labels
+    '''draw what event we are in if we have onset_labels
         @param frame - frame to draw on (modify in place)
-        @param frame_number - how far into the task are we 'count' elsewhere"""
+        @param frame_number - how far into the task are we 'count' elsewhere
+    '''
+    def draw_event(self, frame, frame_number):
         if self.onset_labels is None:
             return
 
@@ -381,11 +483,13 @@ class auto_tracker:
         cv2.putText(
             frame, draw_sym, draw_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, colors[event], 2
         )
-    def annotated_plt(self):
-        """plot tracked x position.
+
+    '''
+    plot tracked x position.
         annotate with eye box images and imort timing events
         cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
-        """
+    '''
+    def annotated_plt(self):
         import matplotlib.pyplot as plt
         event_colors = {'cue': 'k', 'vgs': 'g', 'dly': 'b', 'mgs': 'r'}
         first_frame = self.settings['start_frame']
