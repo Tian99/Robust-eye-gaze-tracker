@@ -262,9 +262,15 @@ class main(QtWidgets.QMainWindow):
         '''
         This is for pre-processing
         '''
+
         #Pre_calculate the perfect threshold for glint detection
         self.threshold_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint)
         parameters_glint['threshold'] = self.threshold_range_glint
+
+        print("first pass pass parameters")
+        print(f"  pupil: {parameters_pupil}")
+        print(f"  glint: {parameters_glint}")
+
         #Propress the blurring factor for pupil
         t1 = threading.Thread(target = self.get_blur, args = (4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint))
         #Get the count for hough transform
@@ -290,6 +296,11 @@ class main(QtWidgets.QMainWindow):
         #Put in the ideal staring position that might be used in the tracker portion
         parameters_pupil['stare_posi'] = self.stare_posi
         parameters_glint['stare_posi'] = self.stare_posi
+
+        # useful to know for e.g. ./tracker.py
+        print("second pass parameters")
+        print(f"  pupil: {parameters_pupil}")
+        print(f"  glint: {parameters_glint}")
 
         #Create the thread for both pupil and glint
         #No need to join because i don't want the user interface to freeze
