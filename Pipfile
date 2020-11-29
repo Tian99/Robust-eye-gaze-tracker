@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+# opencv-python = "*" # must not exist?! 20201128
+# https://pypi.org/project/opencv-contrib-python/
+# https://github.com/opencv/opencv/issues/15723
+opencv-contrib-python-headless = "*"
+pandas = "*"
+matplotlib = "*"
+pyqt5 = "*"
+numpy = "*"
+imutils = "*"
+scipy = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
