@@ -2,6 +2,7 @@ import cv2
 from tracker import auto_tracker
 from gtracker import g_auto_tracker
 from optimization import fast_tracker
+import threading
 import statistics 
 
 class preprocess:
@@ -18,7 +19,7 @@ class preprocess:
         self.blur = blur
         self.canny = canny
         self.factor = (sf,sf)#this factor might change based on the resize effect
-
+        print(self.factor)
         self.width = int(self.sample.shape[1])
         self.height = int(self.sample.shape[0])
         self.dim = (int(self.width/self.factor[0]),\
@@ -58,6 +59,7 @@ class preprocess:
                 # print("\n")
 
         return (ideal_thresh) 
+
     def g_count(self, ROI, CPI, parameters_glint, video):
         gt = g_auto_tracker(video, ROI, CPI, parameters_glint)
         count = 0
@@ -82,7 +84,7 @@ class preprocess:
                 result = i
             #Reset current
             current = []
-            count = 0
+            count = 0;
         return result
 
     def d_glint(self):
@@ -130,5 +132,6 @@ class preprocess:
 if __name__ == '__main__':
     CPI = [[50, 280], [31, 80]]
     center = (99.0, 87.0)
-    setup = preprocess(center, CPI)
-    s(setup.start())
+    parameters_glint = {'threshold': (100, 100), 'blur': (1, 1), 'canny': (40, 50), 'H_count': 8, 'stare_posi':None}
+    setup = preprocess(center, 1, CPI)
+    setup.g_count(CPI, CPI, parameters_glint, "input/run1.mov")

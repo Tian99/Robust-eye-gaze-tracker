@@ -79,7 +79,7 @@ class rationalize():
         #Since there should always be some gap between between starting and first cue, we half the starting length
         start_po = start_po/2
         #And for now, let's assume that the original file is faster the tracked data.
-        for i in range(int(start_po), 0, -10):
+        for i in range(int(start_po), 0, -5):
             #Get each iteration
             for j in analyze_sec:
                 for k in self.detected_x[int(j[0])-i:int(j[1])-i]:

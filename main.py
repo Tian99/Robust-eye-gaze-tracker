@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os
 import sys
 import cv2
@@ -17,21 +15,10 @@ from tracker import auto_tracker
 from gtracker import g_auto_tracker
 from pyqtgraph import PlotWidget
 from Interface.user import MyWidget
+from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMessageBox
 from Interface.video_player import VideoPlayer
-
-
-def mkmessage(msgtext):
-    """quick message in a box
-    useful for warning user about bad input
-    @param msgtext text to display in messagebox"""
-    msg = QMessageBox()
-    msg.setText(msgtext)
-    msg.show()
-    return msg.exec_()
-
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -168,20 +155,9 @@ class main(QtWidgets.QMainWindow):
         self.player.resize(600, 400)
         self.player.show()
 
-    def clear_folder(self, folder):
-        """remove all contents of a folder
-        or make directory if it does not exist
-        TODO: why not just remove the folder and remake it?
-        TODO: move out of class. doesn't use/need 'self'
-        """
-        # if the folder doesn't exist, we want it
-        # but we dont need to clear anything out from it (early return)
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-            return
-
-        # remove every file or directory individually
-        # TODO: why not just remove the folder? os.rmdir(folder)
+    #Clear everything in a folder
+    def clear_folder(self, path):
+        folder = path
         for filename in os.listdir(folder):
             file_path = os.path.join(folder, filename)
             try:
@@ -204,24 +180,27 @@ class main(QtWidgets.QMainWindow):
         return (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
 
     def pupil_threshold(self, center, sf, CPI, parameters):
-        pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
-        return pp.start()
+        pre_pupil_threshold = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
+        return pre_pupil_threshold.start()
 
     def glint_threshold(self, center, sf, CPI, parameters):
-        pp = preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
-        return pp.d_glint()
+        pre_glint_threshold= preprocess(center, sf, CPI, parameters['blur'], parameters['canny'])
+        return pre_glint_threshold.d_glint()
 
     def get_blur(self, sf, CPI, parameters, ROI_pupil, ROI_glint):
-        bb = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
-        self.g_blur = bb.anal_blur(ROI_pupil, ROI_glint, self.Video)
+        pre_glint_blur = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
+        self.g_blur = pre_glint_blur.anal_blur(ROI_pupil, ROI_glint, self.Video)
 
     #This is for the count in Glint detection Hough Transform
     def get_count(self, sf, ROI, CPI, parameters):
         glint_CPI = copy.deepcopy(CPI)
-        cc = preprocess(None, sf, glint_CPI, parameters['blur'], parameters['canny'])
-        self.H_count = cc.g_count(ROI, glint_CPI, parameters, self.Video)
+        preprocess_glint = preprocess(None, sf, glint_CPI, parameters['blur'], parameters['canny'])
+        self.H_count = preprocess_glint.g_count(ROI, glint_CPI, parameters, self.Video)
 
     def analyze(self):
+
+        self.Analyze.setEnabled(False)
+        self.Plotting.setEnabled(True)
 
         parameters_pupil = {'blur': (20, 20), 'canny': (40, 50), 'stare_posi':None}
         parameters_glint = {'blur': (1, 1), 'canny': (40, 50), 'H_count': 8, 'stare_posi':None}
@@ -235,25 +214,8 @@ class main(QtWidgets.QMainWindow):
         center_pupil = self.get_center(ROI_pupil)
         center_glint = self.get_center(ROI_glint)
 
-        # if we don't have boxes for both pupil and glint
-        # and we analyze, we'll crash
-        for cntr in [center_pupil, center_glint]:
-            if cntr[0] == 0 and cntr[1] == 0:
-                mkmessage('Specify box for both pupil and glint!')
-                return
-
-        self.Analyze.setEnabled(False)
-        self.Plotting.setEnabled(True)
-
-
         self.th_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint) #In order to get previse result for glint, don't shrink it!!
         parameters_glint['threshold'] = self.th_range_glint
-
-        # This info is useful for e.g. running with ./tracker.py
-        print("running with params:")
-        print(f"pupil: {parameters_pupil}")
-        print(f"glint: {parameters_glint}")
-
         #Propress the blurring factor
         t1 = threading.Thread(target = self.get_blur, args = (4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint))
         #Should be after the threshold is gotten to get the count for Hough transform
