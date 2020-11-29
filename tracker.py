@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from imutils.video import VideoStream
 from imutils.video import FPS
 from collections import defaultdict
@@ -9,6 +11,7 @@ import scipy.stats as stats
 import imutils
 import time
 import cv2
+import pandas as pd
 
 OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
@@ -19,6 +22,7 @@ OPENCV_OBJECT_TRACKERS = {
     "medianflow": cv2.TrackerMedianFlow_create,
     "mosse": cv2.TrackerMOSSE_create,
 }
+
 
 def set_tracker(tracker_name):
     """tracker definition depends on opencv version"""
@@ -31,6 +35,7 @@ def set_tracker(tracker_name):
         return cv2.Tracker_create("kcf")
 
     return OPENCV_OBJECT_TRACKERS[tracker_name]()
+
 
 class Box:
     """ wrapper for boxed pupil location from tracker"""
@@ -46,7 +51,7 @@ class Box:
 
     def draw_box(self, frame):
         """draw box onto a frame"""
-        box_color = (255,0, 0)
+        box_color = (255, 0, 0)
         center_color = (255, 0, 0)
         x, y, w, h = (self.x, self.y, self.w, self.h)
         cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
@@ -54,7 +59,8 @@ class Box:
         cv2.circle(frame, (int(self.mid_x), int(self.mid_y)), 5, center_color, -1)
 
     def __repr__(self):
-        return f'({self.x},{self.y}) {self.w}x{self.h}' 
+        return f'({self.x},{self.y}) {self.w}x{self.h}'
+
 
 class Circle:
     """ wrapper for circled pupil location from tracker"""
@@ -71,6 +77,7 @@ class Circle:
         center_color = (255, 255, 0)
         cv2.circle(frame, (self.x, self.y), self.r, circle_color, 2)
         cv2.circle(frame, (self.x, self.y), 5, center_color, -1)
+
 
 class TrackedFrame:
     """a frame and it's tracking info"""
@@ -114,21 +121,90 @@ class TrackedFrame:
     def save_frame(self):
         cv2.imwrite("output/%015d.png" % self.count, self.frame)
 
+
+class EyePosition:
+    def __init__(self, csv_out=None):
+        """ append to array is much faster than append to DataFrame"""
+        self.x = []
+        self.y = []
+        self.r = []
+        self.blink = []
+        if csv_out:
+            csv_out = open(csv_out, "w")
+        self.csv_out = csv_out
+
+    def set_file(self, csv_out):
+        """maybe we changed our mind about writing to a file"""
+        self.close()
+        self.csv_out = open(csv_out, "w")
+
+    def append(self, x, y, r, blink):
+        """append and optionally write"""
+        self.x.append(x)
+        self.y.append(y)
+        self.r.append(r)
+        self.blink.append(blink)
+        self.write_last_line()
+
+    def write_last_line(self):
+        """write last addition to eye position.
+        but only if we have a file to write to.
+        - when writing first line, also write header
+        """
+        if self.csv_out is None:
+            return
+        i = len(self.x)
+        if i == 1:
+            self.csv_out.write("sample,x,y,r,blink\n")
+
+        self.csv_out.write("%d,%d,%d,%d,%d\n" %
+                           (i, self.x[i], self.y[i], self.r[i], self.blink[i]))
+
+    def to_df(self):
+        """create dataframe from arrays"""
+        pos_dict = {'x': self.x, 'y': self.y, 'r': self.y,
+                    'sample': range(len(self.r)), 'blink': self.blink}
+        return pd.DataFrame(pos_dict)
+
+    def close(self):
+        """ close any dangly file handle.
+        maybe not too imortant"""
+        if self.csv_out:
+            self.csv_out.close()
+
+    def despike(self, z_thres=1):
+        """despike x,y,r based on a radius too far from mean
+        @param z_thres - zscore threshold for despiking
+
+        long spikes are smoothed out to first value before spike
+        TODO: remove zeros (blink)
+        previously described as "filter"
+        """
+        z_score = stats.zscore(self.r)
+        for i in range(len(z_score)):
+            if abs(z_score[i]) >= z_thres:
+                self.r[i] = self.r[i - 1]
+                self.x[i] = self.x[i - 1]
+                self.y[i] = self.y[i - 1]
+
+
 class auto_tracker:
     """eye tracker"""
 
     def __init__(
-        self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
+        self, video_fname, bbox, ft_params, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
+        """
+        @param video_fname - input video file
+        @param bbox        - [x,y,w,h] bounding box (TODO: is that correct order of dims?)
+        @param ft_params  -  optimization.py:fast_tracker paramaters dictionary
+                             (canny=[], blur=[], threshold=[low,high])
+        """
         # inputs
         self.t_count = 0 #Count for Hough transform
-        self.f_count = 0 #Count for the filtering
         self.local_count = 0
         self.num_circle = 20
         self.first = None #The first image to initialize KCF tracker
-        self.original_pupil = None
-        self.filtered_pupil = None
-        self.filtered_pupil = None
         self.onset_labels = None  # see set_events
         self.m_range = 20 #Blink detection
         self.m_critical = 3 #Blink detection
@@ -139,15 +215,7 @@ class auto_tracker:
         self.video_fname = video_fname
         self.tracker_name = tracker_name
         self.ROI_glint = ROI_glint
-        self.blur = parameters['blur']
-        self.canny = parameters['canny']
-        self.threshold = parameters['threshold']
-        #The ideal staring position in the file
-        self.stare_posi = parameters['stare_posi']
-        self.r_value = []
-        self.x_value = []
-        self.y_value = []
-        self.blink_rate = []
+        self.ft_params = ft_params
         self.settings = {
             "write_img": write_img,
             "max_frames": max_frames,
@@ -156,15 +224,16 @@ class auto_tracker:
         self.tracker = set_tracker(tracker_name)
         print(f"initializign Pupil tracking @ {start_frame} frame")
         self.get_input() #Reads in the perfect image and set tracker
-        self.previous = (0, 0, 0) #Means for tidying up the data
         #Calculate the threshold as well for Hough Transform
         # this image is used to construct the image tracker
         # file to save pupil location
+
+        self.eye_position = EyePosition()
         if self.settings['write_img']:
-            self.original_pupil = open("data_output/origin_pupil.csv", "w")
-            self.original_pupil.write("sample,x,y,r,blink\n")
-            self.filtered_pupil = open("data_output/filter_pupil.csv", "w")
-            self.filtered_pupil.write("sample,x,y,r\n")
+            self.eye_position.set_file("data_output/origin_pupil.csv")
+            # TODO: remove add despike back in
+            #self.filtered_pupil = open("data_output/filter_pupil.csv", "w")
+            #self.filtered_pupil.write("sample,x,y,r\n")
 
 
     def get_input(self):
@@ -181,7 +250,9 @@ class auto_tracker:
 
     def render(self, frame):
         #Get the perfect edge image
-        ft = fast_tracker(frame, self.threshold, self.blur, self.canny)
+        ft = fast_tracker(frame, self.ft_params['threshold'],
+                          self.ft_params['blur'],
+                          self.ft_params['canny'])
         result = ft.prepossing()
         edged = result[0]
         threshold = result[1]
@@ -195,7 +266,7 @@ class auto_tracker:
         self.tracker.init(frame, self.iniBB)
         (success_box, box) = self.tracker.update(frame)
 
-        if success_box :
+        if success_box:
             return Box(box)
         else:
             return Box([0]*4)
@@ -219,7 +290,8 @@ class auto_tracker:
 
     #Filter out the unhealthy circle and recalculate for useful data
     def filter(self, edged, circle):
-        k = self.num_circle - 1; #One less than the previous defined number 
+        # One less than the previous defined number
+        k = self.num_circle - 1
         diameter = circle[0][0][2]*2 if circle is not None else None
         while (diameter is None or \
               diameter >= min(self.iniBB[2], self.iniBB[3])or\
@@ -240,7 +312,6 @@ class auto_tracker:
     def update_position(self, tframe):
         x_b, y_b = tframe.box.mid_xy()
         x, y, r = tframe.circle.mid_xyr()
-        self.f_count += 1
 
         if not tframe.success_box and not tframe.success_circle:
             self.m_range -= 1
@@ -250,32 +321,7 @@ class auto_tracker:
             self.m_critical = 3
             self.num_blink += 1
 
-        if x != 0 and y != 0 and r != 0:
-            self.previous = (x,y,r) #The 0 index equals the previous one
-        else:
-            x, y, r = self.previous
-        if self.original_pupil:
-            self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
-            self.r_value.append(r)
-            self.x_value.append(x)
-            self.y_value.append(y)
-            self.blink_rate.append(self.num_blink)
-
-        #Start filtering by Z_score at 2000 mark
-        if self.filtered_pupil and self.f_count >= 2000:
-            #Only calculate zscore every 1000
-            if self.f_count % 2000 == 0:
-                z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
-
-                for i in range(len(z_score)):
-                    #The threshold is meant to be three, but I figure 1 is more precise
-                    if abs(z_score[i]) >= 1:
-                        self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
-                        self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
-                        self.y_value[i+self.local_count] = self.y_value[i-1+self.local_count]
-
-                    self.filtered_pupil.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
-            self.local_count += 1
+        self.eye_position.append(x, y, r, self.num_blink)
 
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
@@ -331,10 +377,10 @@ class auto_tracker:
                     exit()
 
         print("Ending of the analysis")
-        if self.original_pupil:
-            self.original_pupil.close()
-        if self.filtered_pupil:
-            self.filtered_pupil.close()
+        self.eye_position.close()
+        #if self.filtered_pupil:
+        #    self.filtered_pupil.close()
+        # TODO: add despike zscore filter back in here
             
     def event_at(self, frame_number):
         """what event is at frame number"""
@@ -378,8 +424,9 @@ class auto_tracker:
         cv2.putText(
             frame, draw_sym, draw_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, colors[event], 2
         )
-    def annotated_plt(self):
+    def annotated_plt(self, task_frame_offset=0):
         """plot tracked x position.
+        @param task_frame_offset=0 frames task onsets are async'ed from video
         annotate with eye box images and imort timing events
         cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
         """
@@ -387,21 +434,28 @@ class auto_tracker:
         event_colors = {'cue': 'k', 'vgs': 'g', 'dly': 'b', 'mgs': 'r'}
         first_frame = self.settings['start_frame']
         last_frame = self.settings['max_frames']
+        pupil_x = self.eye_position.x
+        d['onset_frame'] = d.onset_frame + task_frame_offset
 
         # blinks get center xpos of 0. exclude those so we can zoom in on interesting things
-        plt.plot([float('nan') if x==0 else x for x in self.pupil_x])
+        plt.plot([float('nan') if x == 0 else x for x in pupil_x])
 
         d = self.onset_labels
         in_range = (d.onset_frame >= first_frame) & (d.onset_frame <= last_frame)
         d = d[in_range]
-        ymax = max(self.pupil_x)
-        ymin = min([x for x in self.pupil_x if x > 0])
+        ymax = max(pupil_x)
+        ymin = min([x for x in pupil_x if x > 0])
         colors = [event_colors[x] for x in d.event]
         event_frames = d.onset_frame - first_frame
         plt.vlines(event_frames, ymin, ymax, color=colors)
         plt.show()
-        
+
+
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)
-    track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
+    ft_pupil_params = {'blur': (20, 20),
+                       'canny': (40, 50),
+                       'threshold': (0, 200)}
+    track = auto_tracker("input/run1.mov", bbox, ft_pupil_params,
+                         write_img=True, max_frames=500)
     track.run_tracker()

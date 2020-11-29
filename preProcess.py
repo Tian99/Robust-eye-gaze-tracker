@@ -82,16 +82,24 @@ class preprocess:
                 result = i
             #Reset current
             current = []
-            count = 0;
+            count = 0
         return result
 
     def d_glint(self):
+        """
+        glint threshold from blurred "search_area"
+        search_area likely from user drawn box
+        """
+        if self.search_area[0] == 0 and self.search_area[1] == 0:
+            raise Exception('glint search area is empty!')
         sample_glint = self.sample[self.search_area[0]:self.search_area[1], self.search_area[2]:self.search_area[3]]
         sample_glint = cv2.cvtColor(sample_glint, cv2.COLOR_BGR2GRAY)
-        sample_glint = cv2.blur(sample_glint,(self.blur[0], self.blur[1]))
+        sample_glint = cv2.blur(sample_glint, (self.blur[0], self.blur[1]))
         # for i in range(self.glint_range[0], self.glint_range[1]): #Able to make a wild guess for threshold detection
         #     for j in range(i, self.glint_range[1], 10):
-        thre,proc = cv2.threshold(sample_glint,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        offset_thres = cv2.THRESH_BINARY+cv2.THRESH_OTSU
+        thre, proc = cv2.threshold(sample_glint, 0, 255, offset_thres)
+        print(f"glint thres in {self.search_area} w/blur {self.blur}: {thre}")
         # cv2.imwrite("look.png", proc)
         # exit()
         return (thre, thre)
