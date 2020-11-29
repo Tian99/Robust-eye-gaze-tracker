@@ -296,7 +296,7 @@ class auto_tracker:
             if pretest:
                 self.testcircle.append(circle.x) #Test circle for the convience of blur test
             else:
-                #No need to update file if it's just a text
+                #No need to update file if it's just a test
                 self.update_position(tframe)
             # Update the fps counter
             fps.update()
