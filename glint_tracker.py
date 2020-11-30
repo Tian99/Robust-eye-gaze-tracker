@@ -115,7 +115,7 @@ class TrackedFrame:
             # how the output frame
 
     def save_frame(self):
-        cv2.imwrite("glint_output/%015d.png" % self.count, self.frame)
+        cv2.imwrite("glint_testing/%015d.png" % self.count, self.frame)
 
 '''
 Class the controls the track for pupil overall
@@ -211,6 +211,12 @@ class g_auto_tracker:
         self.varied_CPI[0][1] += self.expand_factor
 
     '''
+    Function that saves frame for testing
+    '''
+    def save_test_frame(self, frame):
+        cv2.imwrite("glint_output/%015d.png" % self.count, frame)
+
+    '''
     Function that reads in the image and renders it
     The parameters used for rendering is gotten from
     the preprocessing
@@ -273,10 +279,13 @@ class g_auto_tracker:
         #Now we need canny for the Hough transform to run properly
         thresholded = ft.threshold_img(cropped)
         cannied = ft.canny_img(thresholded)
+        #Output the testing frame to see what the issue is
+        self.save_test_frame(cannied)
         #Run Hough transform on the cannied image
         ht = HTimp(cannied, 150, (200, H_count), (0,0))
         #Apologize for the format....
         current = ht.get()
+
         if current is not None:
             current = current[0][0]
             circle = current
@@ -324,7 +333,7 @@ class g_auto_tracker:
 
                 for i in range(len(z_score)):
                     #The threshold is meant to be three, but I figure 2 is more precise
-                    if abs(z_score[i]) >= 1:
+                    if abs(z_score[i]) >= 0.5:
                         self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
                         self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
                         self.y_value[i+self.local_count] = self.y_value[i-1+self.local_count]
@@ -377,7 +386,6 @@ class g_auto_tracker:
                 }
                 tframe.draw_tracking(info)
                 self.draw_event(tframe.frame, count)
-                tframe.save_frame()
 
             # option to quit with keyboard q
             key = cv2.waitKey(1) & 0xFF
