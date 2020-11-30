@@ -12,6 +12,7 @@ from plotting import auto_draw
 from preProcess import preprocess
 from pupil_tracker import auto_tracker
 from glint_tracker import g_auto_tracker
+from rationalize import rationalize
 from pyqtgraph import PlotWidget
 from Interface.user import MyWidget
 from PyQt5.QtGui import QIcon, QPixmap
@@ -77,6 +78,7 @@ class main(QtWidgets.QMainWindow):
         self.Glint_click.setEnabled(False)
         self.Pupil_chose.setEnabled(False)
         self.Glint_chose.setEnabled(False)
+        self.Sync.setEnabled(False)
         self.Plotting.setEnabled(False)
         self.Analyze.setEnabled(False)
 
@@ -84,6 +86,7 @@ class main(QtWidgets.QMainWindow):
         self.Glint_chose.toggled.connect(self.circle_glint)
         self.Pupil_click.clicked.connect(self.store_pupil)
         self.Glint_click.clicked.connect(self.store_glint)
+        self.Sync.clicked.connect(self.synchronize_data)
         self.Plotting.clicked.connect(self.plot_result)
         self.Generate.clicked.connect(self.generate)
         self.Analyze.clicked.connect(self.analyze)
@@ -111,6 +114,14 @@ class main(QtWidgets.QMainWindow):
         self.show()
 
     '''
+    This one synchronizes original data from the tracker data
+    '''
+    def synchronize_data(self):
+        usable_file = 'data_output/filter_pupil.csv'
+        data_sync = rationalize(self.File, usable_file)
+        #Enable the synchronized data plot
+        self.syncmessage.setText("Sync data available!")
+    '''
     Function that handles <static> plotting by first read in available data from csv file
     '''
     def orgdata_handle(self):
@@ -126,7 +137,8 @@ class main(QtWidgets.QMainWindow):
     '''
     def update_plot_data(self):
         if self.track_pupil is not None:
-
+            #Enable data synchronization as well
+            self.Sync.setEnabled(True)
             #Need to literally updateing the list by first removing the first
             self.data['r'] = self.data['r'][1:]
             self.data['x'] = self.data['x'][1:]

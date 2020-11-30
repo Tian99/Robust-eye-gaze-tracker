@@ -13,6 +13,8 @@ class rationalize():
         #Detected file from the video file
         self.detected_data = pd.read_csv(detected_file)
         self.analyze_chunk = []
+        #Variable that stores the otential lag
+        self.lag = 0 
 
         #Now the x is really what we need in most cases(for now)
         #Need to multiply 60 frame/s
@@ -28,6 +30,15 @@ class rationalize():
         self.shape_data()
         self.scan()
 
+    '''
+    Functional function that prints out the notification
+    '''
+    def message_output(self):
+        print("Potential lag considered %d"%self.lag)
+
+    '''
+    Function that shapes the data based upon currently shaped length 
+    '''
     def shape_data(self):
         current = 0
         break_out = False
@@ -72,7 +83,6 @@ class rationalize():
         #Now get the chunk out of the detected data 
         #We only need x for the detected data
         self.detected_x = self.detected_data['x']
-
         #self.analyze_chunk contains all the cue data
         #Get where the first cue starts
         start_po = self.original_data['cue'][0]
@@ -88,18 +98,24 @@ class rationalize():
 
             if standd < min_posi:
                 min_posi = standd
-                lag = i
+                self.lag = i
 
             #Clear the list everytime
             self.analyze_chunk.clear()
+        self.message_output()
 
-        print(lag)
+        #Now change the original based upon rationalization
+        self.original_data['cue'] = [x - self.lag for x in self.original_data['cue']]
+        self.original_data['vgs'] = [x - self.lag for x in self.original_data['vgs']]
+        self.original_data['dly'] = [x - self.lag for x in self.original_data['dly']]
+        self.original_data['mgs'] = [x - self.lag for x in self.original_data['mgs']]
 
-                
-
-
-
-
+    '''
+    Get the output based on the rationalized original data
+    '''
+    def rationalized_output(self):
+        #Write the output to a csv file
+        
 
 if __name__ == '__main__':
     original_file = "input/10997_20180818_mri_1_view.csv"
