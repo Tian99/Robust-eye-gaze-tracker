@@ -412,7 +412,7 @@ class auto_tracker:
                 # only print every 250 frames. printing is slow
                 if count % 250 == 0:
                     print(
-                        "@ step %d, center = (%.02f, %.02f, %0.2f); %.02f fps"
+                        "@ Pupil step %d, center = (%.02f, %.02f, %0.2f); %.02f fps"
                         % (count, *tframe.circle.mid_xyr(), fps_measure)
                     )
 
@@ -432,7 +432,8 @@ class auto_tracker:
                     exit()
 
         #Close with manner
-        print("Ending of the analysis")
+        print("Ending of the analysis for Pupil")
+
         if self.original_pupil:
             self.original_pupil.close()
         if self.filtered_pupil:

@@ -117,19 +117,25 @@ class main(QtWidgets.QMainWindow):
     This one synchronizes original data from the tracker data
     '''
     def synchronize_data(self):
-        usable_file = 'data_output/filter_pupil.csv'
+        usable_file_pupil = 'data_output/filter_pupil.csv'
+        usable_file_glint = 'data_output/filter_glint.csv'
+        pupil_save = "data_output/rationalized_pupil.csv"
+        glint_save = "data_output/rationalized_glint.csv"
         #Check for availability
         try:
-            pd.read_csv(usable_file)
+            pd.read_csv(usable_file_pupil)
+            pd.read_csv(usable_file_glint)
         except:
             print("Data Not ready yet!!!!!")
             return
 
-        data_sync = rationalize(self.File, usable_file)
-        #Store the file of the rationalized output
-        data_sync.rationalized_output()
-        #Enable the synchronized data plot
-        self.syncmessage.setText("Sync data available!")
+        #Print the pupil
+        data_sync_pupil = rationalize(self.File, usable_file_pupil, pupil_save)
+        data_sync_pupil.rationalized_output()
+
+        data_sync_glint = rationalize(self.File, usable_file_glint, glint_save)
+        data_sync_glint.rationalized_output()
+
     '''
     Function that handles <static> plotting by first read in available data from csv file
     '''

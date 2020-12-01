@@ -6,7 +6,7 @@ import numpy as np
 import statistics as st
 
 class rationalize():
-    def __init__(self, original_file, detected_file):
+    def __init__(self, original_file, detected_file, write_file):
         #First of course to read in the file
         #Original input file(not precise)
         self.original_data = pd.read_csv(original_file)
@@ -27,6 +27,10 @@ class rationalize():
         self.original_data['vgs'] = self.original_data['vgs']*60
         self.original_data['dly'] = self.original_data['dly']*60
         self.original_data['mgs'] = self.original_data['mgs']*60
+
+        #Write to the output csv file
+        self.rationalized_pupil = open(write_file, "w")
+        self.rationalized_pupil.write("cue,vgs,dly,mgs\n")
 
         #Get the row count of the detected data, we gonna based all the calculation on that
         self.row_count = len(self.detected_data.index)
@@ -140,19 +144,19 @@ class rationalize():
             vgs_result = st.mean(self.detected_x[self.direction_comb['vgs'][i][0]:self.direction_comb['vgs'][i][1]])
             dly_result = st.mean(self.detected_x[self.direction_comb['dly'][i][0]:self.direction_comb['dly'][i][1]])
             mgs_result = st.mean(self.detected_x[self.direction_comb['mgs'][i][0]:self.direction_comb['mgs'][i][1]])
+            #If the file is opened
+            if self.rationalized_pupil:
+                 self.rationalized_pupil.write("%lf,%lf,%lf,%lf\n" % (cue_result, vgs_result, dly_result, mgs_result))
 
-
-            print(cue_result)
-            print(vgs_result)
-            print(dly_result)
-            print(mgs_result)
-            print('\n')
-        
+        #Turn off the csv file
+        if self.rationalized_pupil:
+            self.rationalized_pupil.close()
 
 if __name__ == '__main__':
     original_file = "input/10997_20180818_mri_1_view.csv"
-    detected_file = "data_output/filter_pupil.csv"
-    App = rationalize(original_file, detected_file)
+    detected_file = "data_output/filter_glint.csv"
+    output_file = "data_output/rationalized_pupil.csv"
+    App = rationalize(original_file, detected_file, output_file)
     App.rationalized_output()
 
 

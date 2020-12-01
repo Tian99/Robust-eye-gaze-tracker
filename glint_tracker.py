@@ -374,7 +374,7 @@ class g_auto_tracker:
             # only print every 250 frames. printing is slow
             if count % 250 == 0:
                 print(
-                    "@ step %d, center = (%.02f, %.02f, %.02f); %.02f fps"
+                    "@ Glint step %d, center = (%.02f, %.02f, %.02f); %.02f fps"
                     % (count, *tframe.circle.mid_xyr(), fps_measure)
                 )
 
@@ -392,7 +392,7 @@ class g_auto_tracker:
             if key == ord("q"):
                 exit()
 
-        print("Ending of the analysis")
+        print("Ending of the glint analysis")
         if self.original_glint:
             self.original_glint.close()
         if self.filtered_glint:

@@ -417,7 +417,7 @@
     <property name="geometry">
      <rect>
       <x>810</x>
-      <y>40</y>
+      <y>20</y>
       <width>91</width>
       <height>51</height>
      </rect>
@@ -646,19 +646,6 @@
     </property>
     <property name="text">
      <string>Sync and output</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="syncmessage">
-    <property name="geometry">
-     <rect>
-      <x>790</x>
-      <y>10</y>
-      <width>131</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Sync plot unavailable</string>
     </property>
    </widget>
   </widget>
