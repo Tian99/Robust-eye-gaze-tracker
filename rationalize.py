@@ -15,6 +15,10 @@ class rationalize():
         self.analyze_chunk = []
         #Variable that stores the otential lag
         self.lag = 0 
+        #File we need to write to
+        self.rationalized_pupil = None
+        #All the direction combined together
+        self.direction_comb = {'cue':[], 'vgs':[], 'dly':[], 'mgs':[]}
 
         #Now the x is really what we need in most cases(for now)
         #Need to multiply 60 frame/s
@@ -31,7 +35,7 @@ class rationalize():
         self.scan()
 
     '''
-    Functional function that prints out the notification
+     Functional function that prints out the notification
     '''
     def message_output(self):
         print("Potential lag considered %d"%self.lag)
@@ -110,17 +114,47 @@ class rationalize():
         self.original_data['dly'] = [x - self.lag for x in self.original_data['dly']]
         self.original_data['mgs'] = [x - self.lag for x in self.original_data['mgs']]
 
+        #Get rid of useless information
+        cue_info = [int(x) for x in self.original_data['cue']if str(x) != 'nan']
+        vgs_info = [int(x) for x in self.original_data['vgs']if str(x) != 'nan']
+        dly_info = [int(x) for x in self.original_data['dly']if str(x) != 'nan']
+        mgs_info = [int(x) for x in self.original_data['mgs']if str(x) != 'nan']
+
+        #We need a renewed current here
+        current = 0
+        while(current < len(cue_info)):
+            self.direction_comb['cue'].append((cue_info[current], vgs_info[current]))
+            self.direction_comb['vgs'].append((vgs_info[current], dly_info[current]))
+            self.direction_comb['dly'].append((dly_info[current], mgs_info[current]))
+            self.direction_comb['mgs'].append((mgs_info[current], mgs_info[current]+120))
+
+            current += 1
+
     '''
     Get the output based on the rationalized original data
     '''
     def rationalized_output(self):
-        #Write the output to a csv file
+        #Crop the original file data
+        for i in range(len(self.direction_comb['cue'])):
+            cue_result = st.mean(self.detected_x[self.direction_comb['cue'][i][0]:self.direction_comb['cue'][i][1]])
+            vgs_result = st.mean(self.detected_x[self.direction_comb['vgs'][i][0]:self.direction_comb['vgs'][i][1]])
+            dly_result = st.mean(self.detected_x[self.direction_comb['dly'][i][0]:self.direction_comb['dly'][i][1]])
+            mgs_result = st.mean(self.detected_x[self.direction_comb['mgs'][i][0]:self.direction_comb['mgs'][i][1]])
+
+
+            print(cue_result)
+            print(vgs_result)
+            print(dly_result)
+            print(mgs_result)
+            print('\n')
         
 
 if __name__ == '__main__':
     original_file = "input/10997_20180818_mri_1_view.csv"
     detected_file = "data_output/filter_pupil.csv"
     App = rationalize(original_file, detected_file)
+    App.rationalized_output()
+
 
 
 

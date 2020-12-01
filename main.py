@@ -118,7 +118,16 @@ class main(QtWidgets.QMainWindow):
     '''
     def synchronize_data(self):
         usable_file = 'data_output/filter_pupil.csv'
+        #Check for availability
+        try:
+            pd.read_csv(usable_file)
+        except:
+            print("Data Not ready yet!!!!!")
+            return
+
         data_sync = rationalize(self.File, usable_file)
+        #Store the file of the rationalized output
+        data_sync.rationalized_output()
         #Enable the synchronized data plot
         self.syncmessage.setText("Sync data available!")
     '''
