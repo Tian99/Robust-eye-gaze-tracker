@@ -95,7 +95,7 @@ class rationalize():
         #Get where the first cue starts
         start_po = self.original_data['cue'][0]
         #Since there should always be some gap between between starting and first cue, we half the starting length
-        start_po = start_po/2
+        start_po = 20
         #And for now, let's assume that the original file is faster the tracked data.
         for i in range(int(start_po), 0, -5):
             #Get each iteration

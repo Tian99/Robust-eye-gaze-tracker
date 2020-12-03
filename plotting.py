@@ -45,6 +45,12 @@ class auto_draw:
 		current = 0
 		mgs_prev = 0
 		plt.plot(self.as_dict['sample'], z_score, 'black')
+
+		#Now change the original based upon rationalization
+		self.stare_posi['cue'] = [x - 10 for x in self.stare_posi['cue']]
+		self.stare_posi['vgs'] = [x - 10 for x in self.stare_posi['vgs']]
+		self.stare_posi['dly'] = [x - 10 for x in self.stare_posi['dly']]
+		self.stare_posi['mgs'] = [x - 10 for x in self.stare_posi['mgs']]
 		#Add legend
 		#Specify the colors
 		while(1):

@@ -273,14 +273,11 @@ class g_auto_tracker:
         #Crop the image based upon CPI
         #Rememer crop and CPI is reverse in terms of X annd Y
         cropped = frame[CPI[1][0]:CPI[1][1],CPI[0][0]:CPI[0][1]]
-
         #We need to incremet it every run to get the best result
         ft = fast_tracker(cropped, self.threshold, self.blur, canny)
         #Now we need canny for the Hough transform to run properly
         thresholded = ft.threshold_img(cropped)
         cannied = ft.canny_img(thresholded)
-        #Output the testing frame to see what the issue is
-        self.save_test_frame(cannied)
         #Run Hough transform on the cannied image
         ht = HTimp(cannied, 150, (200, H_count), (0,0))
         #Apologize for the format....
@@ -386,6 +383,7 @@ class g_auto_tracker:
                 }
                 tframe.draw_tracking(info)
                 self.draw_event(tframe.frame, count)
+                tframe.save_frame()
 
             # option to quit with keyboard q
             key = cv2.waitKey(1) & 0xFF

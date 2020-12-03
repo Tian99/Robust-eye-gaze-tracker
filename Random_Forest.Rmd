@@ -1,0 +1,124 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load packages
+
+```{r, load_packages}
+library(tidyverse)
+library(tidymodels)
+```
+
+```{r, read_glimpse_data}
+df <- read.csv(file = 'expanded.csv')
+```
+
+Get a glimpse of the data.  
+
+```{r, check_glimpse}
+df %>% glimpse()
+```
+
+Select the data for evaluation 
+
+```{r, make_chosen_data}
+chosen_df <- df %>% select(sample, x, y, r, result)
+```
+
+Visualize the data
+```{r, visualize}
+df %>% ggplot(aes(x = sample, colour = result))+
+  geom_point(aes(y = x))+
+  geom_point(aes(y = y))+
+  geom_point(aes(y = r))
+```
+```{r, random_forest}
+library(ranger)
+set.seed(234589)
+# split the data for training and testing
+chosen_split <- initial_split(chosen_df, 
+                                prop = 3/4)
+#Extract training and testing sets
+chosen_train <- training(chosen_split)
+chosen_test <- testing(chosen_split)
+
+#Get the cross validation
+chosen_cv <- vfold_cv(chosen_train)
+
+#We might need preprocessing
+chosen_recipe <-
+  recipe(result ~ x + y + r, data = chosen_df) %>% 
+  step_normalize(all_numeric()) %>% 
+  step_knnimpute(all_predictors())
+
+#Look at the preprocessed dataset
+chosen_preprocessed <- chosen_recipe %>%
+  # apply the recipe to the training data
+  prep(chosen_train) %>%
+  # extract the pre-processed training dataset
+  juice()
+#Specify the model
+chosen_model <- 
+  #First use linear:lm()
+  rand_forest() %>%
+  set_args(mtry = tune()) %>% 
+  set_engine("ranger", importance = "impurity") %>%
+  set_mode("classification") %>% 
+  translate()
+
+#Put it inside a workflow
+chosen_workflow <- workflow() %>%
+  # add the recipe
+  add_recipe(chosen_recipe) %>%
+  # add the model
+  add_model(chosen_model)
+
+#Tune the parameters for the tree
+df_grid <- expand.grid(mtry = c(3,4,5))
+df_tune_result <- chosen_workflow %>% 
+  tune_grid(resamples = chosen_cv,
+            grid = df_grid,
+            )
+
+chosen_final <- df_tune_result %>% 
+  select_best()
+
+chosen_workflow <- chosen_workflow %>%
+  finalize_workflow(chosen_final)
+  
+
+chosen_random_tree_fit <- chosen_workflow %>%
+  #fitting
+  last_fit(chosen_split)
+
+
+#Get the performance
+random_tree_performance <- chosen_random_tree_fit %>% collect_metrics()
+random_tree_performance
+
+test_predictions <- chosen_random_tree_fit %>% collect_predictions()
+test_predictions
+
+# generate a confusion matrix
+test_predictions %>% 
+  conf_mat(truth = result, estimate = .pred_class)
+
+```
+
+
+```{r, get_final_model}
+final_model <- fit(chosen_workflow, chosen_df)
+#Need to extract the importance
+ranger_obj <- pull_workflow_fit(final_model)$fit
+ranger_obj
+
+ranger_obj$variable.importance
+
+test_predictions %>%
+  ggplot() +
+  geom_density(aes(x = .pred_cue, fill = result), 
+               alpha = 0.5)
+```
+Looks like the most important variable is x
+
+
