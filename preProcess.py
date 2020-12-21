@@ -8,41 +8,66 @@ import statistics
 class preprocess:
     def __init__(self, s_center, sf, CPI = None, blur = (16, 16), canny = (40, 50), image = None):
 
+        '''
+        If we need this function, then pass in the image.
+        Otherwise always use the chosen best frame
+        '''
         if image is None:
             self.sample = cv2.imread("input/chosen_pic.png")
         else:
             self.sample = image
-        
-        self.brange = range(10, 22, 1) #Range to find the best blurring
-        self.s_center = s_center #Later useful for decrease runtime
-        self.cropping_factor = CPI
+        '''
+        range to find the best blurring
+        10 and 22 are wild gueseses. There might be cases that exceedes this boundary
+        '''
+        self.brange = range(10, 22, 1)
+        '''
+        Make public all the necessary parameters
+        sf is the resizing factor, to ensure runtime efficiency
+        '''
         self.blur = blur
         self.canny = canny
         self.factor = (sf,sf)#this factor might change based on the resize effect
-        print(self.factor)
+        '''
+        Steps to resize image based on resizing factor
+        '''
         self.width = int(self.sample.shape[1])
         self.height = int(self.sample.shape[0])
         self.dim = (int(self.width/self.factor[0]),\
                     int(self.height/self.factor[1]))
         self.cropped = cv2.resize(self.sample, self.dim)
-        #Make the image smaller to increase run_time
-
+        '''
+        What we need to search is the area cropped by the user divide by the the shrinking factors
+        '''
+        self.cropping_factor = CPI
         self.search_area = (int(self.cropping_factor[1][0]/self.factor[0]), int(self.cropping_factor[1][1]/self.factor[0]), \
                             int(self.cropping_factor[0][0]/self.factor[1]), int(self.cropping_factor[0][1]/self.factor[1]))
-
+        '''
+        Get the radius using CPI, which is the same as cropping_factor
+        '''
         self.radius_h = int(min(self.cropping_factor[0][1] - self.cropping_factor[0][0],\
-                     self.cropping_factor[1][1] - self.cropping_factor[1][0])/2) #Minimum of croping displacement is closer to radius
+                     self.cropping_factor[1][1] - self.cropping_factor[1][0])/2)
 
-        self.radius_l = 10 #Initialize to 10 for now, later change based on the size of glint
-        #normalize it as well.
+        '''
+        We define a minimum radius, which is also divided by the shirking factor to normalize it.
+        again, 10 is a wild guess because I suspect there would be any pupil size smaller than 10 pixel.
+        '''
+        self.radius_l = 10
         self.radius = (int(self.radius_l/self.factor[0]), int(self.radius_h/self.factor[1]))
-        #GUessed threshold#####################################
-        self.threshold_range = (0, 255) #to iterate through everything.
+        
+        '''
+        Iterate through every single threshold there is.
+        '''
+        self.threshold_range = (0, 255)
 
+    '''
+    This function run the hough transform multiple times and return the ideal threshold for all runs
+    '''
     def start(self):
         most_vote = 0;
         ideal_thresh = (0, 0)
         ideal_center = None
+        #Iterate through both parameters in the threshold parameters
         for i in range(self.threshold_range[0], self.threshold_range[1], 5):
             for j in range(i, self.threshold_range[1]-50, 10):
                 setup = fast_tracker(self.cropped, (i, j), self.blur, self.canny, self.radius) #Might be slow
@@ -50,23 +75,26 @@ class preprocess:
                 #Run the Hough Transfom, a voting algorithm that will analysis the legidity of processed image.
                 #Result is [coordinate] and [max voting]
                 result = setup.hough_transform(processed, self.search_area)
+                #The biggest vote corresponds to the best threshold
                 if most_vote < sum(result[1]):
                     most_vote = sum(result[1])
                     ideal_thresh = (i, j) 
                     ideal_center = result[0][0]
-                # print(i, j)
-                # print(result[1])
-                # print("\n")
 
         return (ideal_thresh) 
 
+    #This funciton uses statistics to find the best parameters for glint
     def g_count(self, ROI, CPI, parameters_glint, video):
+        #Need to run the tracker for glint detection
         gt = g_auto_tracker(video, ROI, CPI, parameters_glint)
         count = 0
+        #Max_frame defines how many frames the tracker need to run before having a result
+        #The bigger the max_frame, the more precise it will be
         max_frame = 6000
         current = []
         minimum = float('inf');
         result = None
+        #For this one, 5 and 13 represents the votes for each circle in hough transform
         for i in range(5, 13): 
             vs = cv2.VideoCapture(video)
             vs.set(1, count)
