@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import sys
 import cv2
@@ -19,6 +20,7 @@ from PyQt5.QtGui import QIcon, QPixmap
 from video_construct import video_construct
 from PyQt5 import uic, QtCore, QtGui, QtWidgets
 from Interface.video_player import VideoPlayer
+from util import mkmessage, get_ROI, get_center
 
 class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
@@ -207,38 +209,16 @@ class main(QtWidgets.QMainWindow):
         self.track_glint.set_events(self.File)
         self.track_glint.run_tracker()
 
-    '''
-    This function clear every thing in the folder
-    No need to make it a button because things clear are all exploratory data
-    '''
-    def clear_folder(self, path):
-        folder = path
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
-
-    '''
-    This one simply cleaer the formatting issues for the cropping factors on the image
-    Another one is CPI which stores [x1, y1, x2, y2]
-    '''
-    def get_ROI(self, cropping_factor):
-        #ROI is [x, y, x_displacement and y_displacement]
-        return (cropping_factor[0][0],\
-                cropping_factor[1][0],\
-                cropping_factor[0][1] - cropping_factor[0][0],\
-                cropping_factor[1][1] - cropping_factor[1][0]) 
-
-    '''
-    This one gets the center coordinate using ROI croppig factor
-    '''
-    def get_center(self, ROI):
-        return (ROI[0] + ROI[2]/2, ROI[1] + ROI[3]/2)
+    def clear_folder(self, folder):
+        ''' Clear every thing in the folder
+        @param folder - directory to remove and remake
+        No need to make it a button. input dir should be exploratory data
+        This has a nice side effect:
+          On first run, output directories dont exist. This creates them
+        '''
+        if os.path.exists(folder):
+            os.rmdir(folder)
+        os.makedirs(folder)
 
     '''
     Preprocess function to get the pupil threshold
@@ -274,11 +254,6 @@ class main(QtWidgets.QMainWindow):
     '''
     def analyze(self):
 
-        '''
-        Enable the interface button
-        '''
-        self.Analyze.setEnabled(False)
-        self.Plotting.setEnabled(True)
 
         '''
         Pre-define the parameters that would later be passed into the tracker
@@ -290,20 +265,39 @@ class main(QtWidgets.QMainWindow):
         We need both CPI and ROI, the difference is that ROI is the displacement 
         and CPI is the new position for both x and y
         '''
-        ROI_pupil = self.get_ROI(self.cropping_factor_pupil)
-        ROI_glint = self.get_ROI(self.cropping_factor_glint)
+        ROI_pupil = get_ROI(self.cropping_factor_pupil)
+        ROI_glint = get_ROI(self.cropping_factor_glint)
         CPI_pupil = self.cropping_factor_pupil
         CPI_glint = self.cropping_factor_glint
-        #We also need the center of pupil and glint based on user-chosen area
-        center_pupil = self.get_center(ROI_pupil)
-        center_glint = self.get_center(ROI_glint)
+        # We also need the center of pupil and glint based on user-chosen area
+        center_pupil = get_center(ROI_pupil)
+        center_glint = get_center(ROI_glint)
+
+        # check user has draw roi boxes for both pupil and glint
+        # without these, we cannot continue. will hit excpetions below
+        for cntr in [center_pupil, center_glint]:
+            if cntr[0] == 0 and cntr[1] == 0:
+                mkmessage('Draw ROI boxes for both pupil and glint!')
+                return
+
+        '''
+        Enable the interface button
+        '''
+        self.Analyze.setEnabled(False)
+        self.Plotting.setEnabled(True)
 
         '''
         This is for pre-processing
         '''
+
         #Pre_calculate the perfect threshold for glint detection
         self.threshold_range_glint = self.glint_threshold(center_glint, 1, CPI_glint, parameters_glint)
         parameters_glint['threshold'] = self.threshold_range_glint
+
+        print("first pass pass parameters")
+        print(f"  pupil: {parameters_pupil}")
+        print(f"  glint: {parameters_glint}")
+
         #Propress the blurring factor for pupil
         t1 = threading.Thread(target = self.get_blur, args = (4, CPI_pupil, parameters_pupil, ROI_pupil, ROI_glint))
         #Get the count for hough transform
@@ -329,6 +323,11 @@ class main(QtWidgets.QMainWindow):
         #Put in the ideal staring position that might be used in the tracker portion
         parameters_pupil['stare_posi'] = self.stare_posi
         parameters_glint['stare_posi'] = self.stare_posi
+
+        # useful to know for e.g. ./tracker.py
+        print("second pass parameters")
+        print(f"  pupil: {parameters_pupil}")
+        print(f"  glint: {parameters_glint}")
 
         #Create the thread for both pupil and glint
         #No need to join because i don't want the user interface to freeze
