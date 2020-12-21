@@ -217,7 +217,8 @@ class main(QtWidgets.QMainWindow):
           On first run, output directories dont exist. This creates them
         '''
         if os.path.exists(folder):
-            os.rmdir(folder)
+            shutil.rmtree(folder)
+            return 
         os.makedirs(folder)
 
     '''
