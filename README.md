@@ -37,8 +37,8 @@ Eye-gaze tracking can be widely implemented in numerous areas; Popular algorithm
 
 ## How To Use
 
-`python main.py` for the interface. 
-	- Crop the pupil bigger than it is.
+`python main.py` for the interface.\
+	- Crop the pupil bigger than it is.\
 	- Crop the glint smaller than it is.
 
 Random forest would be run separatly. 
