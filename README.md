@@ -27,9 +27,9 @@ Eye-gaze tracking can be widely implemented in numerous areas; Popular algorithm
 
 #### Technologies
 
-- Hough Transform
-- KCF Tracker
-- Random Forest
+- Hough Transform \\
+- KCF Tracker \\
+- Random Forest \\
 
 [Back To The Top](#Robust-eye-gaze-tracking)
 
