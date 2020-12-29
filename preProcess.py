@@ -148,6 +148,8 @@ class preprocess:
 
             #Get the best blur using standard deviation
             std = statistics.stdev(track.testcircle)
+
+            #Clumsy way of determing the best standard deviation
             if std == min(g_std, std):
                 # #Get rid of exceptions
                 # if track.testcircle.count(0)/len(track.testcircle) > 0.1:

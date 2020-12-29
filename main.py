@@ -96,8 +96,13 @@ class main(QtWidgets.QMainWindow):
         '''
         Get or set two user entered values
         '''
-        self.VideoText.setText('input/10997_20180818_run1_115620.avi.avi')
+        self.VideoText.setText('input/run3.mov')
         self.FileText.setText('input/10997_20180818_mri_1_view.csv')
+        #Create the data output directory
+        try:
+            os.mkdir('data_output')
+        except OSError:
+            print ("Creation of the directory failed")
 
         '''
         Initialize the dynamic plot
@@ -236,7 +241,7 @@ class main(QtWidgets.QMainWindow):
         return pre_glint_threshold.d_glint()
 
     '''
-    Preprocess function to get the glint blur
+    Preprocess function to get the pupil blur
     '''
     def get_blur(self, sf, CPI, parameters, ROI_pupil, ROI_glint):
         pre_pupil_blur = preprocess(None, sf, CPI, parameters['blur'], parameters['canny'])
@@ -319,6 +324,7 @@ class main(QtWidgets.QMainWindow):
         parameters_pupil['blur'] = self.pupil_blur
         #Add the perfect threshold value
         parameters_pupil['threshold'] = th_range_pupil 
+
         #Add the perfect H_count value for glint. Pupil doesn't need this
         parameters_glint['H_count'] = self.H_count 
         #Put in the ideal staring position that might be used in the tracker portion
