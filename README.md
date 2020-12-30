@@ -4,7 +4,7 @@
 
 > This is an eye-tracking application to help you track eye-gaze on noisy videos.
 
-> Showcase:https://youtu.be/gnbKotJpXRw
+> Showcase:https://www.youtube.com/watch?v=PKyYS1GFDp0&t=17s&pbjreload=101
 
 > Final Report:https://github.com/Tian99/High-Speed-Noise-Tolerant-Eye-Gaze-Tracker/blob/master/doc/Jiache%20Tian%20Research%20Report%202020.pdf
 
