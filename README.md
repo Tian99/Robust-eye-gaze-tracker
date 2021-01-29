@@ -60,7 +60,7 @@ No Reference
 
 ## License
 
-No License
+MIT License
 
 Copyright (c) [2020] [Jiachen Tian]
 
