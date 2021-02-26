@@ -4,120 +4,17 @@ from extraction import extraction
 from optimization import fast_tracker
 import scipy.stats as stats
 import cv2
+from tracker import Box, Circle, TrackedFrame, set_tracker
 
-#For user to choose different tracking resorts
-OPENCV_OBJECT_TRACKERS = {
-    "csrt": cv2.TrackerCSRT_create,
-    "kcf": cv2.TrackerKCF_create,
-    "boosting": cv2.TrackerBoosting_create,
-    "mil": cv2.TrackerMIL_create,
-    "tld": cv2.TrackerTLD_create,
-    "medianflow": cv2.TrackerMedianFlow_create,
-    "mosse": cv2.TrackerMOSSE_create,
-}
+def fun_if_len(func, vals, nan_val=0):
+    "min or max on list"
+    return func(vals) if len(vals) > 0 else nan_val
 
-'''
-tracker definition depends on opencv version
-'''
-def set_tracker(tracker_name):
-    # extract the OpenCV version info
-    (major, minor) = cv2.__version__.split(".")[:2]
-    if int(major) == 3 and int(minor) < 3:
-        return cv2.Tracker_create("kcf")
 
-    return OPENCV_OBJECT_TRACKERS[tracker_name]()
-
-'''
-wrapper for boxed pupil location from tracker
-'''
-class Box:
-    def __init__(self, boxcoords):
-        boxcoords = (int(x) for x in boxcoords)
-        self.x, self.y, self.w, self.h = boxcoords
-        self.mid_x = self.x + self.w / 2
-        self.mid_y = self.y + self.h / 2
-
-    def mid_xy(self):
-        return (self.mid_x, self.mid_y)
-
-    def draw_box(self, frame):
-        """draw box onto a frame"""
-        box_color = (255,0, 0)
-        center_color = (255, 0, 0)
-        x, y, w, h = (self.x, self.y, self.w, self.h)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
-        # The dot in the center that marks the center of the pupil
-        cv2.circle(frame, (int(self.mid_x), int(self.mid_y)), 5, center_color, -1)
-
-    def __repr__(self):
-        return f'({self.x},{self.y}) {self.w}x{self.h}' 
-
-'''
-wrapper for circled pupil location from tracker
-'''
-class Circle:
-
-    def __init__(self, circlecoords):
-        circlecoords = (int(x) for x in circlecoords)
-        self.x, self.y, self.r = circlecoords
-
-    def mid_xyr(self):
-        return (self.x, self.y, self.r)
-
-    def draw_circle(self, frame):
-        circle_color = (255, 255, 0)
-        center_color = (255, 255, 0)
-        cv2.circle(frame, (self.x, self.y), self.r, circle_color, 2)
-        cv2.circle(frame, (self.x, self.y), 5, center_color, -1)
-
-'''
-a frame and it's tracking info
-'''
-class TrackedFrame:
-
-    def __init__(self, frame, count):
-        self.frame = frame  
-        self.count = count
-        self.box = None
-        #Variables whether the tracking is successful or not
-        self.success_box = False
-        self.success_circle = False
-
-    def set_box(self, box):
-        self.box = box
-        self.success_box = self.box.w != 0
-
-    def set_circle(self, circle):
-        self.circle = circle
-        self.success_circle = self.circle.r != 0
-
-    '''
-    add bouding box and pupil center to image
-    '''
-    def draw_tracking(self, text_info):
-        text_color = (0, 0, 255)
-        h = self.frame.shape[0]
-        i = 0
-        #Draw both box and circle to the frame
-        self.box.draw_box(self.frame)
-        self.circle.draw_circle(self.frame)
-
-        # Put text to the image
-        for (k, v) in enumerate(text_info):
-            text = "{}: {}".format(k, v)
-            pos = (10, h - ((i * 20) + 20))
-            cv2.putText(
-                self.frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2
-            )
-            i = i + 1
-
-    def save_frame(self):
-        cv2.imwrite("output/%015d.png" % self.count, self.frame)
-
-'''
-Class that controls the track for pupil overall
-'''
 class auto_tracker:
+    '''
+    Class that controls the track for pupil overall
+    '''
     def __init__(
         self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
@@ -162,6 +59,7 @@ class auto_tracker:
         self.video_fname = video_fname
         self.tracker_name = tracker_name
         self.ROI_glint = ROI_glint
+        print(f"PUPIL: using parameters: {parameters}")
         self.blur = parameters['blur']
         self.canny = parameters['canny']
         self.threshold = parameters['threshold']
@@ -422,7 +320,8 @@ class auto_tracker:
                         "Success": "Yes" if tframe.success_box else "No",
                         "FPS": "{:.2f}".format(fps_measure),
                     }
-                    tframe.draw_tracking(info)
+                    tframe.draw_tracking()
+                    tframe.annotate_text(info)
                     self.draw_event(tframe.frame, count)
                     tframe.save_frame()
 
@@ -510,10 +409,6 @@ class auto_tracker:
         event_frames = d.onset_frame - first_frame
         plt.vlines(event_frames, val_min, val_max, color=colors)
         plt.show()
-
-def fun_if_len(func, vals, nan_val=0):
-    "min or max on list"
-    return func(vals) if len(vals) > 0 else nan_val
 
 
 if __name__ == "__main__":
