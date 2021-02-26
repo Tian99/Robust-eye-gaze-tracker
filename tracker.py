@@ -10,12 +10,19 @@ OPENCV_OBJECT_TRACKERS = {
     "csrt": cv2.TrackerCSRT_create,
     "kcf": cv2.TrackerKCF_create,
     "mil": cv2.TrackerMIL_create,
-    # 20210226WF - not in my opencv?!
-    # "boosting": cv2.TrackerBoosting_create, 
-    # "tld": cv2.TrackerTLD_create,
-    # "medianflow": cv2.TrackerMedianFlow_create,
-    # "mosse": cv2.TrackerMOSSE_create,
 }
+try:
+    # 20210226WF - not in my opencv?!
+    others = {
+         "boosting": cv2.TrackerBoosting_create,
+         "tld": cv2.TrackerTLD_create,
+         "medianflow": cv2.TrackerMedianFlow_create,
+         "mosse": cv2.TrackerMOSSE_create,
+    }
+    OPENCV_OBJECT_TRACKERS = {**OPENCV_OBJECT_TRACKERS, **others}
+except AttributeError as err:
+    print(f"WARNING: cannot import all trackers: {err}")
+
 
 def set_tracker(tracker_name):
     '''
@@ -55,7 +62,6 @@ class Box:
         if show_center:
             self.mark_center(frame)
 
-
     def __repr__(self):
         return f'({self.x},{self.y}) {self.w}x{self.h}'
 
@@ -85,7 +91,10 @@ class Circle:
     def draw_glint(self, frame):
         r = 6
         circle_color = (0,255, 0)
-        cv2.circle(frame, (self.mid_x_c, self.mid_y_c), r, circle_color, 2)
+        cv2.circle(frame, (self.x, self.y), r, circle_color, 2)
+
+    def __repr__(self):
+        return f'({self.x},{self.y}) r={self.r}'
 
 
 
@@ -98,7 +107,7 @@ class TrackedFrame:
         self.frame = frame
         self.count = count
         #Variables whether the tracking is successful or not
-        self.box = None   
+        self.box = None
         self.success_box = False
         # only used for pupil?
         self.success_circle = False
@@ -113,12 +122,19 @@ class TrackedFrame:
         self.success_circle = self.circle.r != 0
 
     def annotate_text(self, text_info):
-        "add text info in lower left corner"
-        # Loop over the info tuples and draw them on our frame
+        """add text info in lower left corner
+        text_info is a dictionary  like label: string_value
+        """
+
+        text_color = (0, 0, 255)
+        font_scale = 0.6
+        thickness_px = 2
+
         h = self.frame.shape[0]
         x_pos = 10
-        y_setp = 20
+        y_step = 20
         i = 0
+
         # Put text to the image
         for (k, v) in enumerate(text_info):
             text = "{}: {}".format(k, v)
@@ -128,17 +144,17 @@ class TrackedFrame:
             )
             i = i + 1
 
-    def draw_tracking(self, text_info):
+    def draw_tracking(self, circle_type="pupil"):
         '''
         add bouding box and pupil center to image
         '''
-        text_color = (0, 0, 255)
-        font_scale = 0.6
-        thickness_px = 2
-
         # geom. info
         self.box.draw_box(self.frame)
-        self.circle.draw_glint(self.frame)
+        if circle_type == "glint":
+            self.circle.draw_glint(self.frame)
+        else:
+            self.circle.draw_circle(self.frame)
+
 
     def save_frame(self, folder_name="output"):
         """save to glint_testing for glint, "output" for pupil"""

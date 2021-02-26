@@ -320,7 +320,8 @@ class auto_tracker:
                         "Success": "Yes" if tframe.success_box else "No",
                         "FPS": "{:.2f}".format(fps_measure),
                     }
-                    tframe.draw_tracking()
+                    tframe.draw_tracking("pupil")
+                    #tframe.draw_tracking("glint")
                     tframe.annotate_text(info)
                     self.draw_event(tframe.frame, count)
                     tframe.save_frame()
