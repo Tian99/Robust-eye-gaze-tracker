@@ -485,30 +485,37 @@ class auto_tracker:
             frame, draw_sym, draw_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, colors[event], 2
         )
 
-    '''
-    plot tracked x position.
-        annotate with eye box images and imort timing events
-        cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
-    '''
     def annotated_plt(self):
+        '''
+        plot tracked x position.
+            annotate with eye box images and imort timing events
+            cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
+        '''
         import matplotlib.pyplot as plt
         event_colors = {'cue': 'k', 'vgs': 'g', 'dly': 'b', 'mgs': 'r'}
         first_frame = self.settings['start_frame']
         last_frame = self.settings['max_frames']
 
         # blinks get center xpos of 0. exclude those so we can zoom in on interesting things
-        plt.plot([float('nan') if x==0 else x for x in self.pupil_x])
+        plt.plot([float('nan') if x==0 else x for x in self.x_value])
 
         d = self.onset_labels
         in_range = (d.onset_frame >= first_frame) & (d.onset_frame <= last_frame)
         d = d[in_range]
-        ymax = max(self.pupil_x)
-        ymin = min([x for x in self.pupil_x if x > 0])
+        val_max = fun_if_len(max,self.x_value)
+        val_min = fun_if_len(min,[x for x in self.x_value if x > 0])
+        if val_max == 0:
+            print("ERROR: no max. tracking failed!?")
         colors = [event_colors[x] for x in d.event]
         event_frames = d.onset_frame - first_frame
-        plt.vlines(event_frames, ymin, ymax, color=colors)
+        plt.vlines(event_frames, val_min, val_max, color=colors)
         plt.show()
-        
+
+def fun_if_len(func, vals, nan_val=0):
+    "min or max on list"
+    return func(vals) if len(vals) > 0 else nan_val
+
+
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)
     track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
