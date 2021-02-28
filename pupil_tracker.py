@@ -247,46 +247,51 @@ class auto_tracker:
         if self.original_pupil:
             self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
 
+        self.zscore()
+
+    def zscore(self, every_n=2000, z_thres=1):
         '''
         Z_SCORE CALCULATION
         Start filtering by Z_score at 2000 mark
         The idea here is that get the standard deviation of radius every 2000 runs,
         since radius would be roughly constant for normal people
         if there is a frame with std difference greater than 1, it is a bad detection,
-        make it equal to the prvious frame value.
+        make it equal to the previous frame value.
+        z_thres of 1 is aggressive
         '''
-        if self.filtered_pupil and self.f_count >= 2000:
-            #Only calculate zscore every 1000
-            if self.f_count % 2000 == 0:
-                z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
+        if not self.filtered_pupil or self.f_count < every_n:
+            return
+        if self.f_count % every_n == 0:
+            z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
+            for i in range(len(z_score)):
+                #The threshold is meant to be three, but I figure 1 is more precise
+                cur = i + self.local_count
+                past = i-1+self.local_count
+                if abs(z_score[i]) >= z_thres:
+                    self.r_value[cur] = self.r_value[past]
+                    self.x_value[cur] = self.x_value[past]
+                    self.y_value[cur] = self.y_value[past]
 
-                for i in range(len(z_score)):
-                    #The threshold is meant to be three, but I figure 1 is more precise
-                    if abs(z_score[i]) >= 1:
-                        self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
-                        self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
-                        self.y_value[i+self.local_count] = self.y_value[i-1+self.local_count]
-
-                    self.filtered_pupil.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
-            self.local_count += 1
-
+                self.filtered_pupil.write("%d,%d,%d,%d\n" % (cur, self.x_value[cur], self.y_value[cur], self.r_value[cur]))
+        self.local_count += 1
     '''
     big function that runs the tracker
     '''
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
+        fps = FPS().start()
         #Transform the video into frames
         vs = cv2.VideoCapture(self.video_fname)
         vs.set(1, count)
-        #Start iterating each and every frame starting fromthe very beginning
+        #Start iterating each and every frame starting from the very beginning
         while True and count < self.settings["max_frames"]:
             #Here just handling the frames
-            count += 1
-            fps = FPS().start()
-            rframe = vs.read()[1]
-            tframe = TrackedFrame(rframe, count)
-            if tframe.frame is None:
+            (have_frame, rframe) = vs.read()
+            if not have_frame:
+                print(f"# last frame @ {count} ({self.video_fname})")
                 break
+            count += 1
+            tframe = TrackedFrame(rframe, count)
 
             #Run each method to find KCF box and Hough Transform circle
             box = self.find_box(tframe.frame)

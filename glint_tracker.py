@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
@@ -148,6 +149,8 @@ class g_auto_tracker:
         #Initialize the KCF tracker
         self.tracker.init(frame, self.iniBB)
         (success_box, box) = self.tracker.update(frame)
+        # patch.cpp:134: error: (-215:Assertion failed) 0 < cn && cn <= CV_CN_MAX in function 'merge'
+
 
         if success_box :
             return Box(box)
@@ -280,9 +283,11 @@ class g_auto_tracker:
                 tframe.save_frame(folder_name="glint_testing")
 
             # option to quit with keyboard q
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
-                exit()
+            if False:
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
+                    exit()
+
 
         print("Ending of the glint analysis")
         if self.original_glint:
@@ -338,5 +343,10 @@ class g_auto_tracker:
         
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)
-    track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
+    params ={'blur': (1, 1),
+             'canny': (40, 50),
+             'H_count': 8,
+             'stare_posi': None,
+             'threshold': (107.0, 107.0)}
+    track = auto_tracker("input/run1.mov", bbox, params, write_img=True, max_frames=500)
     track.run_tracker()
