@@ -7,7 +7,7 @@ from tracker import Box, Circle, set_tracker, TrackedFrame
 @pytest.fixture
 def vid_frame():
     """extract single frame for use in tests"""
-    vid_fname = "input/example_frame34.png"
+    vid_fname = "input/examples/11710_run1_frame34.png"
     # read in
     vs = cv2.VideoCapture(vid_fname)
     frame = vs.read()[1]

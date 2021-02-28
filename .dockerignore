@@ -3,4 +3,4 @@
 venv
 doc/
 input/
-!input/example_*.png
+!input/examples/*

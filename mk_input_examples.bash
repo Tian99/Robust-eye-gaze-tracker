@@ -22,3 +22,5 @@ input/11710_20200911_run1.mov right  0:0:54   0:0:54.5
 input/11710_20200911_run1.mov left   0:0:59.8 0:1:00.1
 input/11710_20200911_run1.mov blink  0:2:05.5 0:2:06.5
 HEREDOC
+
+$DRYRUN ffmpeg -i input/11710_20200911_run1.mov -vf "select=eq(n\,34)" -vframes 1 input/examples/11710_run1_frame34.png
