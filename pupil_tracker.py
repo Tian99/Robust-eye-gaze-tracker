@@ -5,6 +5,7 @@ from extraction import extraction
 from optimization import fast_tracker
 import scipy.stats as stats
 import cv2
+import os.path
 from tracker import Box, Circle, TrackedFrame, set_tracker
 
 def fun_if_len(func, vals, nan_val=0):
@@ -17,7 +18,7 @@ class auto_tracker:
     Class that controls the track for pupil overall
     '''
     def __init__(
-        self, video_fname, bbox, parameters, ROI_glint=[0,0,0,0], tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
+        self, video_fname, bbox, parameters, ROI_glint=[0,0,0,0], tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10, best_img=None
     ):
         '''
         variables that controls the z_score filter
@@ -58,6 +59,7 @@ class auto_tracker:
         self.testcircle = []
         self.iniBB = bbox
         self.video_fname = video_fname
+
         self.tracker_name = tracker_name
         self.ROI_glint = ROI_glint
         print(f"PUPIL: using parameters: {parameters}; box @ {bbox}")
@@ -102,20 +104,24 @@ class auto_tracker:
         '''
         Get the perfect image that's stored in the input
         '''
-        self.get_input()
+        self.get_input(best_img)
 
         '''
         If failed, current will be set to previous
         '''
         self.previous = (0, 0, 0) 
 
-    '''
-    Function that reads in the image and renders it
-    The parameters used for rendering is gotten from
-    the preprocessing
-    '''
-    def get_input(self):
-        self.first = cv2.imread("input/chosen_pic.png")
+    def get_input(self, best_img_file):
+        '''
+        Function that reads in the image and renders it
+        The parameters used for rendering is gotten from
+        the preprocessing
+        '''
+        if best_img_file and os.path.exists(best_img_file):
+            self.first = cv2.imread(best_img)
+        else:
+            print("# no (existing) image given. reading 1st frame. hope it's good!")
+            self.first = cv2.VideoCapture(self.video_fname).read()[1]
         self.first = self.render(self.first)[1]
         #initialize the tracker
         self.tracker.init(self.first, self.iniBB)

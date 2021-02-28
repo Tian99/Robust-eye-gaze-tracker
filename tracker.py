@@ -144,7 +144,7 @@ class TrackedFrame:
 
     def draw_tracking(self, circle_type="pupil"):
         '''
-        add bouding box and pupil center to image
+        add bounding box and pupil center to image
         '''
         # geom. info
         self.box.draw_box(self.frame)

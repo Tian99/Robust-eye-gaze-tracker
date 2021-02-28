@@ -201,7 +201,7 @@ class main(QtWidgets.QMainWindow):
     '''
     def pupil_tracking(self, ROI, parameters, p_glint):
         #Initialize the eye_tracker for pupil
-        self.track_pupil = auto_tracker(self.Video, ROI, parameters, p_glint)
+        self.track_pupil = auto_tracker(self.Video, ROI, parameters, p_glint, best_img="input/chosen_pic.png")
         self.track_pupil.set_events(self.File)
         self.track_pupil.run_tracker()
 
@@ -481,10 +481,10 @@ class main(QtWidgets.QMainWindow):
         fg.draw_y('plotting/filtered_y_glint.png')
         fg.draw_r('plotting/filtered_r_glint.png')
 
-    '''
-    Function to choose the best eye picture for user to crop
-    '''
     def to_frame(self, video, limit = 300):
+        '''
+        Search criteria: darkest image (has pupil instead of bright eyelid)
+        '''
         maximum = 0
         wanted = 0
         #i counts the image sequence generated from the video file

@@ -1,3 +1,10 @@
+.RData
+.Rhistory
+.coverage
+Pipfile.lock
+.python-version
+test/results.txt
+txt/
 *.avi
 *.png
 *.csv
