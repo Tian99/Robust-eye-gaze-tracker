@@ -1,5 +1,7 @@
 # Robust eye-gaze tracking
 
+[![Test](https://github.com/WillForan/High-Speed-Noise-Tolerant-Eye-Gaze-Tracker/actions/workflows/test.yaml/badge.svg)](https://github.com/WillForan/High-Speed-Noise-Tolerant-Eye-Gaze-Tracker/actions/workflows/test.yaml)
+
 ![alt text](https://github.com/Tian99/Robust-eye-gaze-tracker/blob/master/input/Screen%20Shot%202020-12-28%20at%202.02.07%20PM.png)
 
 > This is an eye-tracking application to help you track eye-gaze on noisy videos.
