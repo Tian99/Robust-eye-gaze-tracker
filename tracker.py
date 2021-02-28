@@ -97,8 +97,6 @@ class Circle:
         return f'({self.x},{self.y}) r={self.r}'
 
 
-
-## Glint
 class TrackedFrame:
     '''
     a frame and it's tracking info

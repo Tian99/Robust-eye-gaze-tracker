@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from HTimp import HTimp
 from imutils.video import FPS
 from extraction import extraction
@@ -16,7 +17,7 @@ class auto_tracker:
     Class that controls the track for pupil overall
     '''
     def __init__(
-        self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
+        self, video_fname, bbox, parameters, ROI_glint=[0,0,0,0], tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
     ):
         '''
         variables that controls the z_score filter
@@ -59,7 +60,7 @@ class auto_tracker:
         self.video_fname = video_fname
         self.tracker_name = tracker_name
         self.ROI_glint = ROI_glint
-        print(f"PUPIL: using parameters: {parameters}")
+        print(f"PUPIL: using parameters: {parameters}; box @ {bbox}")
         self.blur = parameters['blur']
         self.canny = parameters['canny']
         self.threshold = parameters['threshold']
@@ -76,6 +77,7 @@ class auto_tracker:
         self.x_value = []
         self.y_value = []
         self.blink_rate = []
+        self.interpolated = []
 
         '''
         Tracker settings
@@ -86,7 +88,7 @@ class auto_tracker:
             "start_frame": start_frame,
             "fps": 60}
         self.tracker = set_tracker(tracker_name)
-        print(f"initializign Pupil tracking @ {start_frame} frame")
+        print(f"initializing Pupil tracking @ {start_frame} frame")
 
         '''
         File handling based on settings
@@ -223,6 +225,7 @@ class auto_tracker:
         This idea here is that if within 20 frames, there exists 3 frames that both KCF and hough transform
         failed, then it is identified as a blink
         '''
+        # TODO: 20 is a large value! less like a blink and more like an extended eye's closed period
         if not tframe.success_box and not tframe.success_circle:
             self.m_range -= 1
             self.m_critical -= 1
@@ -234,13 +237,15 @@ class auto_tracker:
         #Set it to previous if the tracker fails
         if x != 0 and y != 0 and r != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
+            self.interpolated.append(False)
         else:
             x, y, r = self.previous
+            self.interpolated.append(True)
 
+        self.append_data(x, y, r, self.num_blink)
         #Only write to file if file exists
         if self.original_pupil:
             self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
-            self.append_data(x, y, r, self.num_blink)
 
         '''
         Z_SCORE CALCULATION
@@ -295,6 +300,7 @@ class auto_tracker:
             if pretest:
                 self.testcircle.append(circle.x)
             else:
+                print(f"# {count}: found box {box} and circle {circle}")
                 self.update_position(tframe)
 
             # Update the fps counter
@@ -327,12 +333,14 @@ class auto_tracker:
                     tframe.save_frame()
 
                 # option to quit with keyboard q
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord("q"):
-                    exit()
+                # no time for this to grab the q key?
+                if False:
+                    key = cv2.waitKey(1) & 0xFF
+                    if key == ord("q"):
+                        exit()
 
         #Close with manner
-        print("Ending of the analysis for Pupil")
+        print(f"# Ending of the analysis for Pupil ({fps.fps()} fps)")
 
         if self.original_pupil:
             self.original_pupil.close()
@@ -413,6 +421,13 @@ class auto_tracker:
 
 
 if __name__ == "__main__":
-    bbox = (48, 34, 162, 118)
-    track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
+    video_file = "input/10997_20180818_run1.mov"
+    #bbox = (48, 34, 162, 118)
+    bbox =  (52, 34, 97, 99)
+    # glint = (85, 111, 86, 105) 
+    params = {'blur': (11, 11),
+             'canny': (40, 50),
+             'stare_posi': None,
+             'threshold': (152, 152)}
+    track = auto_tracker(video_file, bbox, params, write_img=True, max_frames=500)
     track.run_tracker()

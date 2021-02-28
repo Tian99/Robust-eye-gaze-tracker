@@ -8,11 +8,8 @@ from tracker import Box, Circle, set_tracker, TrackedFrame
 def vid_frame():
     """extract single frame for use in tests"""
     vid_fname = "input/example_frame34.png"
-    frame_number = 200
-    frame_jumpto = 500
     # read in
     vs = cv2.VideoCapture(vid_fname)
-    vs.set(1, frame_number)
     frame = vs.read()[1]
     return frame
 
