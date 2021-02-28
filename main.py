@@ -353,18 +353,18 @@ class main(QtWidgets.QMainWindow):
         self.clear_folder("./glint_testing")
         self.clear_folder("./testing")
 
-    '''
-    This function generate the chosen picture for the user to select their prefered area
-    '''
-    def generate(self):
-        #Enable all the functional buttons
-        self.Analyze.setEnabled(True)
-        self.Generate.setEnabled(False)
-        self.Pupil_chose.setEnabled(True)
-        self.Glint_chose.setEnabled(True)
-        #Clase all the testing variables. No other use but testing
-        self.clear_testing()
+    def generate_update_buttons(self, can_generate):
+        """enable/disable buttons after generating a ref image"""
+        self.Analyze.setEnabled(can_generate)
+        self.Pupil_chose.setEnabled(can_generate)
+        self.Glint_chose.setEnabled(can_generate)
+        # disable clicking generate again
+        self.Generate.setEnabled(not can_generate)
 
+    def generate(self):
+        '''
+        This function generate the chosen picture for the user to select their prefered area
+        '''
         #Check the validity of two files entered
         self.Video = self.VideoText.text()
         self.File = self.FileText.text()
@@ -374,6 +374,12 @@ class main(QtWidgets.QMainWindow):
         if not os.path.exists(self.File):
             print(f"Text file '{self.File}' does not exist")
             return
+
+        #Enable all the functional buttons
+        self.generate_update_buttons(True)
+        #Clase all the testing variables. No other use but testing
+        self.clear_testing()
+
 
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
