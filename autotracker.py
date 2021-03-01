@@ -73,13 +73,15 @@ class PupilTracker(GenericTracker):
         #Set it to previous if the tracker fails
         if x != 0 and y != 0 and r != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
+            self.interpolated.append(False)
         else:
             x, y, r = self.previous
+            self.interpolated.append(True)
 
+        self.append_data(x, y, r, self.num_blink)
         #Only write to file if file exists
         if self.data_file:
             self.data_file.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
-            self.append_data(x, y, r, self.num_blink)
         self.zscore()
 
 
@@ -96,7 +98,7 @@ class PupilTracker(GenericTracker):
         else:
             return Box([0]*4)
     
-    def find_circle(self, frame, pretest):
+    def find_circle(self, frame, pretest=False):
         '''
         Find circle using Hough Transform tracker
         '''
@@ -208,12 +210,14 @@ class GlintTracker(GenericTracker):
         #Set it to previous if the tracker fails
         if x != 0 and y != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
+            self.interpolated.append(False)
         else:
             x, y. r = self.previous
+            self.interpolated.append(True)
 
+        self.append_data(x, y, r)
         if self.data_file:
             self.data_file.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
-            self.append_data(x, y, r)
         self.zscore()
 
     def render(self, frame):

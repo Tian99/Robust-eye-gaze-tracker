@@ -214,6 +214,7 @@ class GenericTracker:
         self.x_value = []
         self.y_value = []
         self.blink_rate = []
+        self.interpolated = []
 
         # Tracker settings
         self.settings = {
