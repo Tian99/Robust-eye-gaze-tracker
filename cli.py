@@ -21,7 +21,7 @@ Example:
 
 """
 from docopt import docopt
-from tracker import auto_tracker
+from pupil_tracker import auto_tracker
 from extraction import extraction
 
 if __name__ == '__main__':
@@ -36,9 +36,24 @@ if __name__ == '__main__':
     max_frames=int(args['--dur']) * fps + start_frame
 
     tracker_name=args["--method"]
+    params = {
+        'pupil':
+            {'blur': (10, 10),
+             'canny': (40, 50),
+             'stare_posi': None,
+             'stare_posi': None,
+             'threshold': (70, 70)},
+        'glint':
+            {'blur': (1, 1),
+             'canny': (40, 50),
+             'H_count': 8,
+             'stare_posi': None,
+             'threshold': (107.0, 107.0)}}
+
 
     track = auto_tracker(args['<vid.mov>'], init_box,
                          write_img=False,
+                         parameters=params['pupil'],
                          tracker_name=tracker_name, max_frames=max_frames,
                          start_frame=start_frame)
     track.set_events(args['<behave.csv>'])

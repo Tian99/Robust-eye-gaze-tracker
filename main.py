@@ -201,7 +201,7 @@ class main(QtWidgets.QMainWindow):
     '''
     def pupil_tracking(self, ROI, parameters, p_glint):
         #Initialize the eye_tracker for pupil
-        self.track_pupil = auto_tracker(self.Video, ROI, parameters, p_glint)
+        self.track_pupil = auto_tracker(self.Video, ROI, parameters, p_glint, best_img="input/chosen_pic.png")
         self.track_pupil.set_events(self.File)
         self.track_pupil.run_tracker()
 
@@ -353,18 +353,18 @@ class main(QtWidgets.QMainWindow):
         self.clear_folder("./glint_testing")
         self.clear_folder("./testing")
 
-    '''
-    This function generate the chosen picture for the user to select their prefered area
-    '''
-    def generate(self):
-        #Enable all the functional buttons
-        self.Analyze.setEnabled(True)
-        self.Generate.setEnabled(False)
-        self.Pupil_chose.setEnabled(True)
-        self.Glint_chose.setEnabled(True)
-        #Clase all the testing variables. No other use but testing
-        self.clear_testing()
+    def generate_update_buttons(self, can_generate):
+        """enable/disable buttons after generating a ref image"""
+        self.Analyze.setEnabled(can_generate)
+        self.Pupil_chose.setEnabled(can_generate)
+        self.Glint_chose.setEnabled(can_generate)
+        # disable clicking generate again
+        self.Generate.setEnabled(not can_generate)
 
+    def generate(self):
+        '''
+        This function generate the chosen picture for the user to select their prefered area
+        '''
         #Check the validity of two files entered
         self.Video = self.VideoText.text()
         self.File = self.FileText.text()
@@ -374,6 +374,12 @@ class main(QtWidgets.QMainWindow):
         if not os.path.exists(self.File):
             print(f"Text file '{self.File}' does not exist")
             return
+
+        #Enable all the functional buttons
+        self.generate_update_buttons(True)
+        #Clase all the testing variables. No other use but testing
+        self.clear_testing()
+
 
         #Create a thread to break down video into frames into out directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
@@ -481,10 +487,10 @@ class main(QtWidgets.QMainWindow):
         fg.draw_y('plotting/filtered_y_glint.png')
         fg.draw_r('plotting/filtered_r_glint.png')
 
-    '''
-    Function to choose the best eye picture for user to crop
-    '''
     def to_frame(self, video, limit = 300):
+        '''
+        Search criteria: darkest image (has pupil instead of bright eyelid)
+        '''
         maximum = 0
         wanted = 0
         #i counts the image sequence generated from the video file

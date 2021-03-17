@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
@@ -7,115 +8,7 @@ import scipy.stats as stats
 import numpy as np
 import copy
 import cv2
-
-#For user to choose different tracking resorts
-OPENCV_OBJECT_TRACKERS = {
-    "csrt": cv2.TrackerCSRT_create,
-    "kcf": cv2.TrackerKCF_create,
-    "boosting": cv2.TrackerBoosting_create,
-    "mil": cv2.TrackerMIL_create,
-    "tld": cv2.TrackerTLD_create,
-    "medianflow": cv2.TrackerMedianFlow_create,
-    "mosse": cv2.TrackerMOSSE_create,
-}
-
-'''
-tracker definition depends on opencv version
-'''
-def set_tracker(tracker_name):
-    # extract the OpenCV version info
-    (major, minor) = cv2.__version__.split(".")[:2]
-    if int(major) == 3 and int(minor) < 3:
-        return cv2.Tracker_create("kcf")
-
-    return OPENCV_OBJECT_TRACKERS[tracker_name]()
-
-'''
-wrapper for boxed pupil location from tracker
-'''
-class Box:
-
-    def __init__(self, boxcoords):
-        boxcoords = (int(x) for x in boxcoords)
-        self.x, self.y, self.w, self.h = boxcoords
-        self.mid_x = self.x + self.w / 2
-        self.mid_y = self.y + self.h / 2
-
-    def mid_xy(self):
-        return (self.mid_x, self.mid_y)
-
-    def draw_box(self, frame):
-        """draw box onto a frame"""
-        box_color = (255,0, 0)
-        x, y, w, h = (self.x, self.y, self.w, self.h)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
-
-    def __repr__(self):
-        return f'({self.x},{self.y}) {self.w}x{self.h}' 
-
-'''
-wrapper for circled pupil location from tracker
-'''
-class Circle:
-
-    def __init__(self, center):
-        #Get the center and radius for the circle detected in Hough Transform
-        self.mid_x_c = center[0]
-        self.mid_y_c = center[1]
-        self.radius = center[2]
-
-    def mid_xyr(self):
-        return (self.mid_x_c, self.mid_y_c, self.radius)
-
-    def draw_circle(self, frame):
-        #I guessed the radius here
-        r = 6
-        circle_color = (0,255, 0)
-        cv2.circle(frame, (self.mid_x_c, self.mid_y_c), r, circle_color, 2)
-
-'''
-a frame and it's tracking info
-'''
-class TrackedFrame:
-
-    def __init__(self, frame, count):
-        self.frame = frame    
-        self.count = count   
-        #Variables whether the tracking is successful or not
-        self.box = None   
-        self.success_box = False 
-
-    def set_box(self, box):
-        self.box = box
-        self.success_box = self.box.w != 0
-
-    def set_circle(self, circle):
-        #We gonna focus primarily focus on circle in glint detection
-        self.circle = circle
-
-    '''
-    add bouding box and pupil center to image
-    '''
-    def draw_tracking(self, text_info):
-        text_color = (0, 0, 255)
-        self.box.draw_box(self.frame)
-        self.circle.draw_circle(self.frame)
-
-        # Loop over the info tuples and draw them on our frame
-        h = self.frame.shape[0]
-        i = 0
-        # Put text to the image
-        for (k, v) in enumerate(text_info):
-            text = "{}: {}".format(k, v)
-            pos = (10, h - ((i * 20) + 20))
-            cv2.putText(
-                self.frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2
-            )
-            i = i + 1
-            # how the output frame
-
-    def save_frame(self):
-        cv2.imwrite("glint_testing/%015d.png" % self.count, self.frame)
+from tracker import Box, Circle, TrackedFrame, set_tracker 
 
 '''
 Class the controls the track for pupil overall
@@ -256,6 +149,8 @@ class g_auto_tracker:
         #Initialize the KCF tracker
         self.tracker.init(frame, self.iniBB)
         (success_box, box) = self.tracker.update(frame)
+        # patch.cpp:134: error: (-215:Assertion failed) 0 < cn && cn <= CV_CN_MAX in function 'merge'
+
 
         if success_box :
             return Box(box)
@@ -381,14 +276,18 @@ class g_auto_tracker:
                     "Success": "Yes" if tframe.success_box else "No",
                     "FPS": "{:.2f}".format(fps_measure),
                 }
-                tframe.draw_tracking(info)
+                #tframe.draw_tracking("pupil")
+                tframe.draw_tracking("glint")
+                tframe.annotate_text(info)
                 self.draw_event(tframe.frame, count)
-                tframe.save_frame()
+                tframe.save_frame(folder_name="glint_testing")
 
             # option to quit with keyboard q
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
-                exit()
+            if False:
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord("q"):
+                    exit()
+
 
         print("Ending of the glint analysis")
         if self.original_glint:
@@ -444,5 +343,10 @@ class g_auto_tracker:
         
 if __name__ == "__main__":
     bbox = (48, 34, 162, 118)
-    track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
+    params ={'blur': (1, 1),
+             'canny': (40, 50),
+             'H_count': 8,
+             'stare_posi': None,
+             'threshold': (107.0, 107.0)}
+    track = auto_tracker("input/run1.mov", bbox, params, write_img=True, max_frames=500)
     track.run_tracker()

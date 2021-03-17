@@ -1,125 +1,24 @@
+#!/usr/bin/env python3
 from HTimp import HTimp
 from imutils.video import FPS
 from extraction import extraction
 from optimization import fast_tracker
 import scipy.stats as stats
 import cv2
+import os.path
+from tracker import Box, Circle, TrackedFrame, set_tracker
 
-#For user to choose different tracking resorts
-OPENCV_OBJECT_TRACKERS = {
-    "csrt": cv2.TrackerCSRT_create,
-    "kcf": cv2.TrackerKCF_create,
-    "boosting": cv2.TrackerBoosting_create,
-    "mil": cv2.TrackerMIL_create,
-    "tld": cv2.TrackerTLD_create,
-    "medianflow": cv2.TrackerMedianFlow_create,
-    "mosse": cv2.TrackerMOSSE_create,
-}
+def fun_if_len(func, vals, nan_val=0):
+    "min or max on list"
+    return func(vals) if len(vals) > 0 else nan_val
 
-'''
-tracker definition depends on opencv version
-'''
-def set_tracker(tracker_name):
-    # extract the OpenCV version info
-    (major, minor) = cv2.__version__.split(".")[:2]
-    if int(major) == 3 and int(minor) < 3:
-        return cv2.Tracker_create("kcf")
 
-    return OPENCV_OBJECT_TRACKERS[tracker_name]()
-
-'''
-wrapper for boxed pupil location from tracker
-'''
-class Box:
-    def __init__(self, boxcoords):
-        boxcoords = (int(x) for x in boxcoords)
-        self.x, self.y, self.w, self.h = boxcoords
-        self.mid_x = self.x + self.w / 2
-        self.mid_y = self.y + self.h / 2
-
-    def mid_xy(self):
-        return (self.mid_x, self.mid_y)
-
-    def draw_box(self, frame):
-        """draw box onto a frame"""
-        box_color = (255,0, 0)
-        center_color = (255, 0, 0)
-        x, y, w, h = (self.x, self.y, self.w, self.h)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), box_color, 2)
-        # The dot in the center that marks the center of the pupil
-        cv2.circle(frame, (int(self.mid_x), int(self.mid_y)), 5, center_color, -1)
-
-    def __repr__(self):
-        return f'({self.x},{self.y}) {self.w}x{self.h}' 
-
-'''
-wrapper for circled pupil location from tracker
-'''
-class Circle:
-
-    def __init__(self, circlecoords):
-        circlecoords = (int(x) for x in circlecoords)
-        self.x, self.y, self.r = circlecoords
-
-    def mid_xyr(self):
-        return (self.x, self.y, self.r)
-
-    def draw_circle(self, frame):
-        circle_color = (255, 255, 0)
-        center_color = (255, 255, 0)
-        cv2.circle(frame, (self.x, self.y), self.r, circle_color, 2)
-        cv2.circle(frame, (self.x, self.y), 5, center_color, -1)
-
-'''
-a frame and it's tracking info
-'''
-class TrackedFrame:
-
-    def __init__(self, frame, count):
-        self.frame = frame  
-        self.count = count
-        self.box = None
-        #Variables whether the tracking is successful or not
-        self.success_box = False
-        self.success_circle = False
-
-    def set_box(self, box):
-        self.box = box
-        self.success_box = self.box.w != 0
-
-    def set_circle(self, circle):
-        self.circle = circle
-        self.success_circle = self.circle.r != 0
-
-    '''
-    add bouding box and pupil center to image
-    '''
-    def draw_tracking(self, text_info):
-        text_color = (0, 0, 255)
-        h = self.frame.shape[0]
-        i = 0
-        #Draw both box and circle to the frame
-        self.box.draw_box(self.frame)
-        self.circle.draw_circle(self.frame)
-
-        # Put text to the image
-        for (k, v) in enumerate(text_info):
-            text = "{}: {}".format(k, v)
-            pos = (10, h - ((i * 20) + 20))
-            cv2.putText(
-                self.frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2
-            )
-            i = i + 1
-
-    def save_frame(self):
-        cv2.imwrite("output/%015d.png" % self.count, self.frame)
-
-'''
-Class that controls the track for pupil overall
-'''
 class auto_tracker:
+    '''
+    Class that controls the track for pupil overall
+    '''
     def __init__(
-        self, video_fname, bbox, parameters, ROI_glint = None, tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10
+        self, video_fname, bbox, parameters, ROI_glint=[0,0,0,0], tracker_name="kcf", write_img=True, start_frame=0, max_frames=9e10, best_img=None
     ):
         '''
         variables that controls the z_score filter
@@ -160,8 +59,10 @@ class auto_tracker:
         self.testcircle = []
         self.iniBB = bbox
         self.video_fname = video_fname
+
         self.tracker_name = tracker_name
         self.ROI_glint = ROI_glint
+        print(f"PUPIL: using parameters: {parameters}; box @ {bbox}")
         self.blur = parameters['blur']
         self.canny = parameters['canny']
         self.threshold = parameters['threshold']
@@ -178,6 +79,7 @@ class auto_tracker:
         self.x_value = []
         self.y_value = []
         self.blink_rate = []
+        self.interpolated = []
 
         '''
         Tracker settings
@@ -188,7 +90,7 @@ class auto_tracker:
             "start_frame": start_frame,
             "fps": 60}
         self.tracker = set_tracker(tracker_name)
-        print(f"initializign Pupil tracking @ {start_frame} frame")
+        print(f"initializing Pupil tracking @ {start_frame} frame")
 
         '''
         File handling based on settings
@@ -202,20 +104,24 @@ class auto_tracker:
         '''
         Get the perfect image that's stored in the input
         '''
-        self.get_input()
+        self.get_input(best_img)
 
         '''
         If failed, current will be set to previous
         '''
         self.previous = (0, 0, 0) 
 
-    '''
-    Function that reads in the image and renders it
-    The parameters used for rendering is gotten from
-    the preprocessing
-    '''
-    def get_input(self):
-        self.first = cv2.imread("input/chosen_pic.png")
+    def get_input(self, best_img_file):
+        '''
+        Function that reads in the image and renders it
+        The parameters used for rendering is gotten from
+        the preprocessing
+        '''
+        if best_img_file and os.path.exists(best_img_file):
+            self.first = cv2.imread(best_img)
+        else:
+            print("# no (existing) image given. reading 1st frame. hope it's good!")
+            self.first = cv2.VideoCapture(self.video_fname).read()[1]
         self.first = self.render(self.first)[1]
         #initialize the tracker
         self.tracker.init(self.first, self.iniBB)
@@ -325,6 +231,7 @@ class auto_tracker:
         This idea here is that if within 20 frames, there exists 3 frames that both KCF and hough transform
         failed, then it is identified as a blink
         '''
+        # TODO: 20 is a large value! less like a blink and more like an extended eye's closed period
         if not tframe.success_box and not tframe.success_circle:
             self.m_range -= 1
             self.m_critical -= 1
@@ -336,54 +243,61 @@ class auto_tracker:
         #Set it to previous if the tracker fails
         if x != 0 and y != 0 and r != 0:
             self.previous = (x,y,r) #The 0 index equals the previous one
+            self.interpolated.append(False)
         else:
             x, y, r = self.previous
+            self.interpolated.append(True)
 
+        self.append_data(x, y, r, self.num_blink)
         #Only write to file if file exists
         if self.original_pupil:
             self.original_pupil.write("%d,%d,%d,%d,%d\n" % (tframe.count, x, y, r, self.num_blink))
-            self.append_data(x, y, r, self.num_blink)
 
+        self.zscore()
+
+    def zscore(self, every_n=2000, z_thres=1):
         '''
         Z_SCORE CALCULATION
         Start filtering by Z_score at 2000 mark
         The idea here is that get the standard deviation of radius every 2000 runs,
         since radius would be roughly constant for normal people
         if there is a frame with std difference greater than 1, it is a bad detection,
-        make it equal to the prvious frame value.
+        make it equal to the previous frame value.
+        z_thres of 1 is aggressive
         '''
-        if self.filtered_pupil and self.f_count >= 2000:
-            #Only calculate zscore every 1000
-            if self.f_count % 2000 == 0:
-                z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
+        if not self.filtered_pupil or self.f_count < every_n:
+            return
+        if self.f_count % every_n == 0:
+            z_score = stats.zscore(self.r_value[self.local_count:self.f_count])
+            for i in range(len(z_score)):
+                #The threshold is meant to be three, but I figure 1 is more precise
+                cur = i + self.local_count
+                past = i-1+self.local_count
+                if abs(z_score[i]) >= z_thres:
+                    self.r_value[cur] = self.r_value[past]
+                    self.x_value[cur] = self.x_value[past]
+                    self.y_value[cur] = self.y_value[past]
 
-                for i in range(len(z_score)):
-                    #The threshold is meant to be three, but I figure 1 is more precise
-                    if abs(z_score[i]) >= 1:
-                        self.r_value[i+self.local_count] = self.r_value[i-1+self.local_count]
-                        self.x_value[i+self.local_count] = self.x_value[i-1+self.local_count]
-                        self.y_value[i+self.local_count] = self.y_value[i-1+self.local_count]
-
-                    self.filtered_pupil.write("%d,%d,%d,%d\n" % (i+self.local_count, self.x_value[i+self.local_count], self.y_value[i+self.local_count], self.r_value[i+self.local_count]))
-            self.local_count += 1
-
+                self.filtered_pupil.write("%d,%d,%d,%d\n" % (cur, self.x_value[cur], self.y_value[cur], self.r_value[cur]))
+        self.local_count += 1
     '''
     big function that runs the tracker
     '''
     def run_tracker(self, pretest = False):
         count = self.settings['start_frame']
+        fps = FPS().start()
         #Transform the video into frames
         vs = cv2.VideoCapture(self.video_fname)
         vs.set(1, count)
-        #Start iterating each and every frame starting fromthe very beginning
+        #Start iterating each and every frame starting from the very beginning
         while True and count < self.settings["max_frames"]:
             #Here just handling the frames
-            count += 1
-            fps = FPS().start()
-            rframe = vs.read()[1]
-            tframe = TrackedFrame(rframe, count)
-            if tframe.frame is None:
+            (have_frame, rframe) = vs.read()
+            if not have_frame:
+                print(f"# last frame @ {count} ({self.video_fname})")
                 break
+            count += 1
+            tframe = TrackedFrame(rframe, count)
 
             #Run each method to find KCF box and Hough Transform circle
             box = self.find_box(tframe.frame)
@@ -397,6 +311,7 @@ class auto_tracker:
             if pretest:
                 self.testcircle.append(circle.x)
             else:
+                print(f"# {count}: found box {box} and circle {circle}")
                 self.update_position(tframe)
 
             # Update the fps counter
@@ -422,17 +337,21 @@ class auto_tracker:
                         "Success": "Yes" if tframe.success_box else "No",
                         "FPS": "{:.2f}".format(fps_measure),
                     }
-                    tframe.draw_tracking(info)
+                    tframe.draw_tracking("pupil")
+                    #tframe.draw_tracking("glint")
+                    tframe.annotate_text(info)
                     self.draw_event(tframe.frame, count)
                     tframe.save_frame()
 
                 # option to quit with keyboard q
-                key = cv2.waitKey(1) & 0xFF
-                if key == ord("q"):
-                    exit()
+                # no time for this to grab the q key?
+                if False:
+                    key = cv2.waitKey(1) & 0xFF
+                    if key == ord("q"):
+                        exit()
 
         #Close with manner
-        print("Ending of the analysis for Pupil")
+        print(f"# Ending of the analysis for Pupil ({fps.fps()} fps)")
 
         if self.original_pupil:
             self.original_pupil.close()
@@ -485,31 +404,41 @@ class auto_tracker:
             frame, draw_sym, draw_pos, cv2.FONT_HERSHEY_SIMPLEX, 0.6, colors[event], 2
         )
 
-    '''
-    plot tracked x position.
-        annotate with eye box images and imort timing events
-        cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
-    '''
     def annotated_plt(self):
+        '''
+        plot tracked x position.
+            annotate with eye box images and imort timing events
+            cribbed from https://matplotlib.org/examples/pylab_examples/demo_annotation_box.html
+        '''
         import matplotlib.pyplot as plt
         event_colors = {'cue': 'k', 'vgs': 'g', 'dly': 'b', 'mgs': 'r'}
         first_frame = self.settings['start_frame']
         last_frame = self.settings['max_frames']
 
         # blinks get center xpos of 0. exclude those so we can zoom in on interesting things
-        plt.plot([float('nan') if x==0 else x for x in self.pupil_x])
+        plt.plot([float('nan') if x==0 else x for x in self.x_value])
 
         d = self.onset_labels
         in_range = (d.onset_frame >= first_frame) & (d.onset_frame <= last_frame)
         d = d[in_range]
-        ymax = max(self.pupil_x)
-        ymin = min([x for x in self.pupil_x if x > 0])
+        val_max = fun_if_len(max,self.x_value)
+        val_min = fun_if_len(min,[x for x in self.x_value if x > 0])
+        if val_max == 0:
+            print("ERROR: no max. tracking failed!?")
         colors = [event_colors[x] for x in d.event]
         event_frames = d.onset_frame - first_frame
-        plt.vlines(event_frames, ymin, ymax, color=colors)
+        plt.vlines(event_frames, val_min, val_max, color=colors)
         plt.show()
-        
+
+
 if __name__ == "__main__":
-    bbox = (48, 34, 162, 118)
-    track = auto_tracker("input/run1.mov", bbox, write_img=True, max_frames=500)
+    video_file = "input/10997_20180818_run1.mov"
+    #bbox = (48, 34, 162, 118)
+    bbox =  (52, 34, 97, 99)
+    # glint = (85, 111, 86, 105) 
+    params = {'blur': (11, 11),
+             'canny': (40, 50),
+             'stare_posi': None,
+             'threshold': (152, 152)}
+    track = auto_tracker(video_file, bbox, params, write_img=True, max_frames=500)
     track.run_tracker()
