@@ -423,32 +423,40 @@ class main(QtWidgets.QMainWindow):
     Store every variables corresponding to the pupil chosen by the user
     '''
     def store_pupil(self):
+        input_d = {
+                     "name": self.cropping_factor_pupil, 
+                     "data": (self.p_x, self.p_xl, self.p_y, self.p_yl)
+                  }
         self.Pupil_store.setText('Pupil: Stored')
-
-        self.cropping_factor_pupil[0][0] = self.MyWidget.begin.x()
-        self.cropping_factor_pupil[0][1] = self.MyWidget.end.x()
-        self.cropping_factor_pupil[1][0] = self.MyWidget.begin.y()
-        self.cropping_factor_pupil[1][1] = self.MyWidget.end.y()
-        self.p_x.setText('x: '+ str(self.MyWidget.begin.x()))
-        self.p_xl.setText('xl: '+ str(self.MyWidget.end.x()))
-        self.p_y.setText('y: '+ str(self.MyWidget.begin.y()))
-        self.p_yl.setText('yl: '+ str(self.MyWidget.end.y()))
+        self.store_fun(input_d)
 
     '''
     Store every variables corresponding to the glint chosen by the user
     '''
     def store_glint(self):
+        input_d = {
+                     "name": self.cropping_factor_glint, 
+                     "data": (self.g_x, self.g_xl, self.g_y, self.g_yl)
+                  }
         self.Glint_store.setText('Glint: Stored')
+        self.store_fun(input_d)
 
-        self.cropping_factor_glint[0][0] = self.MyWidget.begin.x()
-        self.cropping_factor_glint[0][1] = self.MyWidget.end.x()
-        self.cropping_factor_glint[1][0] = self.MyWidget.begin.y()
-        self.cropping_factor_glint[1][1] = self.MyWidget.end.y()
-        self.g_x.setText('x: '+ str(self.MyWidget.begin.x()))
-        self.g_xl.setText('xl: '+ str(self.MyWidget.end.x()))
-        self.g_y.setText('y: '+ str(self.MyWidget.begin.y()))
-        self.g_yl.setText('yl: '+ str(self.MyWidget.end.y()))
 
+    def store_fun(self, input = None):
+        self.Glint_store.setText('Glint: Stored')
+        inner_count = 0
+        action = (
+                  self.MyWidget.begin.x(),
+                  self.MyWidget.end.x(),
+                  self.MyWidget.begin.y(),
+                  self.MyWidget.end.y()
+                 )
+        text = ('x: ', 'xl: ', 'y: ', 'yl: ')
+        for i in range(0, 2):
+            for j in range(0, 2):
+                input["name"][i][j] = action[inner_count]
+                input["data"][inner_count].setText(text[inner_count] + str(action[inner_count]))
+                inner_count += 1
 
     '''
     Function that statically plot the tracking results to the file "plotting" for developer inspection
