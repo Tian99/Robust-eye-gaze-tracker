@@ -9,6 +9,7 @@ import shutil
 import numpy as np
 import pyqtgraph as pg
 import pandas as pd
+from functools import partial
 from plotting import auto_draw
 from preProcess import preprocess
 from pupil_tracker import auto_tracker
@@ -26,18 +27,12 @@ class main(QtWidgets.QMainWindow):
     def __init__(self, video = None, file = None):
         #Dictionary including index and picture for each
         super().__init__()
-        '''
-        User interactive widget
-        '''
+        #User interactive widget
         self.MyWidget = None
-        '''
-        Variables for the best image chosen at the beginning
-        '''
+        #Variables for the best image chosen at the beginning
         self.pic_collection = {}
         self.wanted_pic = None
-        '''
-        Variables that get the class of the tracker
-        '''
+        #Variables that get the class of the tracker
         self.track_pupil = None
         self.track_glint = None
         '''
@@ -84,8 +79,8 @@ class main(QtWidgets.QMainWindow):
         self.Plotting.setEnabled(False)
         self.Analyze.setEnabled(False)
 
-        self.Pupil_chose.toggled.connect(self.circle_pupil)
-        self.Glint_chose.toggled.connect(self.circle_glint)
+        self.Pupil_chose.toggled.connect(partial(self.circle_subject, "pupil"))
+        self.Glint_chose.toggled.connect(partial(self.circle_subject, "glint"))
         self.Pupil_click.clicked.connect(self.store_pupil)
         self.Glint_click.clicked.connect(self.store_glint)
         self.Sync.clicked.connect(self.synchronize_data)
@@ -366,16 +361,12 @@ class main(QtWidgets.QMainWindow):
         self.clear_testing()
 
         #Check the validity of two files entered
-        self.Video = self.VideoText.text()
-        self.File = self.FileText.text()
-        if not os.path.exists(self.Video): #or not os.path.exists(File):
-            print(f"Video file '{self.Video}' does not exist")
-            return
-        if not os.path.exists(self.File):
-            print(f"Text file '{self.File}' does not exist")
+        self.Video = self.file_check(self.VideoText.text())
+        self.File  = self.file_check(self.FileText.text())
+        if not self.Video or not self.File:
             return
 
-        #Create a thread to break down video into frames into out directory
+        #Create a thread to break down video into frames into our directory
         t1 = threading.Thread(target=self.to_frame, args=(self.Video, None))
         #Read in the original data file, maybe it has some uses later?
         self.orgdata_handle()
@@ -392,33 +383,26 @@ class main(QtWidgets.QMainWindow):
         #Set the text in the interface to tell the user it's time to carry on
         self.label_5.setText("Generating done, choose(Pupil/Glint)")
 
+    def file_check(self, name):
+        if not os.path.exists(name): #or not os.path.exists(File):
+            print(f"Video file '{name}' does not exist")
+            return 0
+        else:
+            return name
+
     '''
     For user to choose pupil in the interface
     '''
-    def circle_pupil(self):
-        #Fist clear every widgets in the layout
-        for i in reversed(range(self.LayVideo.count())): 
-            self.LayVideo.itemAt(i).widget().setParent(None)
-
-        #Then set the new widget
-        self.Pupil_click.setEnabled(True)
-        self.Glint_click.setEnabled(False)
-        self.MyWidget = MyWidget(self)
-        self.LayVideo.addWidget(self.MyWidget)
-
-    '''
-    For user to choose glint in the interface
-    '''
-    def circle_glint(self):
+    def circle_subject(self, subject):
+        booll = True if subject is "pupil" else False
         #Fist clear every widgets in the layout
         for i in reversed(range(self.LayVideo.count())): 
             self.LayVideo.itemAt(i).widget().setParent(None)
         #Then set the new widget
-        self.Pupil_click.setEnabled(False)
-        self.Glint_click.setEnabled(True)
+        self.Pupil_click.setEnabled(booll)
+        self.Glint_click.setEnabled(not booll)
         self.MyWidget = MyWidget(self)
         self.LayVideo.addWidget(self.MyWidget)
-
     '''
     Store every variables corresponding to the pupil chosen by the user
     '''
